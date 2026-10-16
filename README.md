@@ -60,7 +60,7 @@ WINEPREFIX=~/wine-adobe python3 adobe-wine-panel.py
 
 ## Language
 
-Click the language box in the header (`Türkçe / English / Deutsch`). Choice is saved to `~/.config/adobe-wine-panel/lang` and applied on next launch (the panel auto-restarts on change). First run auto-detects `LANG`/`LC_*`.
+Default is **English**. Click the language box in the header (`Türkçe / English / Deutsch`) to switch. Choice is saved to `~/.config/adobe-wine-panel/lang` and applied on next launch (the panel auto-restarts on change).
 
 Desktop entries ship with `GenericName[tr/en/de]` and `Comment[tr/en/de]`.
 
@@ -68,11 +68,21 @@ Desktop entries ship with `GenericName[tr/en/de]` and `Comment[tr/en/de]`.
 
 ```
 adobe-substance-3d-audition-wine-panel/
-├── adobe-wine-panel.py   # main app (TR/EN/DE, single file)
+├── adobe-wine-panel.py       # main app (TR/EN/DE, single file)
+├── adobe-wine-panel.desktop  # start-menu entry
+├── install.sh                # Arch installer → /opt/adobe-wine-panel
 ├── README.md
-├── LICENSE              # MIT
+├── CHANGELOG.md
+├── LICENSE                   # MIT
 ├── requirements.txt
 └── .gitignore
+```
+
+Installer:
+
+```bash
+chmod +x install.sh
+./install.sh
 ```
 
 ## Troubleshooting

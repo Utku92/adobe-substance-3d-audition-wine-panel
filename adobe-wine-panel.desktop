@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=Adobe Substance 3D + Audition Wine Panel
+GenericName=Adobe Substance 3D Wine Manager
+GenericName[tr]=Adobe Substance 3D Wine Yöneticisi
+GenericName[de]=Adobe Substance 3D Wine-Verwaltung
+Comment=Manages Adobe Substance 3D and Audition apps and patched Wine setup
+Comment[tr]=Adobe Substance 3D ve Audition uygulamalarını ve yamalı Wine kurulumunu yönetir
+Comment[de]=Verwaltet Adobe Substance 3D- und Audition-Apps sowie gepatchtes Wine-Setup
+Exec=/usr/bin/env python3 /opt/adobe-wine-panel/adobe-wine-panel.py
+Icon=adobe-wine-panel
+Terminal=false
+StartupNotify=true
+Categories=Graphics;3DGraphics;Audio;Settings;Utility;
+Keywords=Adobe;Substance;Wine;Painter;Designer;Sampler;Audition;3D;

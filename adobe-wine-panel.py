@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Adobe Substance 3D · Wine Panel        (tek dosya · sürüm 3.2 / v3.2 / v3.2)
+Adobe Substance 3D + Audition · Wine Panel        (single file · v3.2)
 
-Bu tek dosya, Adobe Substance 3D uygulamalarını Linux'ta çalıştırmak için
-gerekli "yamalı Wine" kurulumunu, resmi Substance 3D (Pt, Sa, Ds) uygulama
-simgelerini, başlat menüsü kısayollarını, msvcp140 doğrudan DLL onarımını ve
-tüm Wine gereksinimlerini (Visual C++ 2005-2022, .NET Framework/.NET 8,
-DirectX/DXVK/VKD3D, Java, Python, Corefonts) sekmeli bir arayüzde yönetir.
+This single file manages the "patched Wine" setup required to run Adobe
+Substance 3D applications on Linux, official Substance 3D (Pt, Sa, Ds) app
+icons, start-menu shortcuts, direct msvcp140 DLL repair and all Wine
+runtimes (Visual C++ 2005-2022, .NET Framework/.NET 8, DirectX/DXVK/VKD3D,
+Java, Python, Corefonts) in a tabbed interface.
 
-Lisans: MIT
+License: MIT
 """
 import os, sys, re, glob, shutil, subprocess
 
@@ -34,17 +34,9 @@ def _load_lang():
             return v
     except Exception:
         pass
-    # sistem dilinden tahmin et
-    try:
-        import locale
-        loc = (locale.getdefaultlocale()[0] or "").lower()
-        if loc.startswith("de"):
-            return "de"
-        if loc.startswith("en"):
-            return "en"
-    except Exception:
-        pass
-    return "tr"
+    # Default to English; user can switch via the header selector.
+    # A saved choice in LANG_FILE always wins.
+    return "en"
 
 _LANG = _load_lang()
 
@@ -85,6 +77,13 @@ TRANSLATIONS = {
     "btn_close": {"tr": "Kapat", "en": "Close", "de": "Schließen"},
     "btn_yes": {"tr": "Evet", "en": "Yes", "de": "Ja"},
     "btn_no": {"tr": "Hayır", "en": "No", "de": "Nein"},
+    "g_vulkan": {"tr": "Grafik sürücünüzün Vulkan desteğini ve Vulkan paketlerini kontrol edin; tanılama aracı yoksa vulkan-tools kurun.", "en": "Check your GPU driver Vulkan support and Vulkan packages; install vulkan-tools if the diagnostic tool is missing.", "de": "GPU-Treiber-Vulkan-Support und Vulkan-Pakete prüfen; vulkan-tools installieren falls das Diagnose-Tool fehlt."},
+    "g_disk": {"tr": "Wine öneki ve Adobe kurulumları için diskte yer açın; 5 GB altındaki boş alan kurulumları aksatabilir.", "en": "Free up disk space for the Wine prefix and Adobe installs; less than 5 GB free can break setups.", "de": "Speicherplatz für Wine-Präfix und Adobe-Installationen freigeben; unter 5 GB frei kann Setups beschädigen."},
+    "g_prefix": {"tr": "Seçili WINEPREFIX doğru mu kontrol edin. Önek eksikse önce Wine ile başlatın veya uygulamayı yeniden kurun.", "en": "Check that the selected WINEPREFIX is correct. If the prefix is missing, bootstrap it with Wine first or reinstall the app.", "de": "Prüfen, ob das gewählte WINEPREFIX korrekt ist. Falls das Präfix fehlt, zuerst mit Wine initialisieren oder App neu installieren."},
+    "g_audio": {"tr": "Audition ses sorunlarında PipeWire/PulseAudio hizmetini ve paneldeki Audition ses onarımını kontrol edin.", "en": "For Audition audio issues, check the PipeWire/PulseAudio service and the panel Audition audio repair.", "de": "Bei Audition-Audioproblemen PipeWire-/PulseAudio-Dienst und Audition-Audio-Reparatur im Panel prüfen."},
+    "g_rt": {"tr": "Eksik isteğe bağlı Windows bileşenlerini Gereksinimler sekmesinden kurun.", "en": "Install missing optional Windows components from the Runtimes tab.", "de": "Fehlende optionale Windows-Komponenten über den Laufzeiten-Tab installieren."},
+    "g_crit": {"tr": "Kritik Wine veya panel yapılandırması eksik. Sistemi Denetle / Onar seçeneği ilgili onarım adımlarını sunar.", "en": "Critical Wine or panel configuration is missing. Check / Repair System offers the matching repair steps.", "de": "Kritische Wine- oder Panel-Konfiguration fehlt. System prüfen / reparieren bietet passende Reparaturschritte."},
+    "g_short": {"tr": "Simgeleri ve Kısayolları Onar eylemiyle başlat menüsü kayıtlarını yenileyin.", "en": "Refresh start-menu entries with the Repair Icons & Shortcuts action.", "de": "Startmenü-Einträge mit Icons & Verknüpfungen reparieren aktualisieren."},
     "log_result_ok": {"tr": "başarılı", "en": "success", "de": "erfolgreich"},
     "log_result_fail": {"tr": "uyarı / hata kodu ({code})", "en": "warning / exit code ({code})", "de": "Warnung / Fehlercode ({code})"},
     "log_prefix": {"tr": "─── işlem sonucu: {res} ───", "en": "─── result: {res} ───", "de": "─── Ergebnis: {res} ───"},
@@ -168,7 +167,7 @@ TRANSLATIONS = {
     "d_audio_reopen": {"tr": "Audition açıksa kapatıp yeniden açın.", "en": "If Audition is open, close and reopen it.", "de": "Falls Audition offen ist, schließen und neu öffnen."},
     "d_audio_err": {"tr": "Ses onarımı sırasında hata:", "en": "Error during audio repair:", "de": "Fehler bei Audio-Reparatur:"},
     "d_rtall_t": {"tr": "Tüm Wine Gereksinimlerini Kur", "en": "Install All Wine Runtimes", "de": "Alle Wine-Laufzeiten installieren"},
-    "d_rtall_q": {"tr": "Aşağıdaki tüm paketler önekine sırayla kurulacak:<br><br>• <b>Visual C++ Redistributable</b> (2005–2022 x86/x64)<br>• <b>msvcp140*.dll Doğrudan Onarımı</b><br>• <b>DirectX 9/10/11/12</b> (DXVK, VKD3D)<br>• <b>Microsoft .NET</b> (6.0 & 8.0 LTS + 4.8)<br>• <b>Python 3.12</b> + <b>Java JRE 21 LTS</b><br>• <b>Yazı Tipleri & Sistem DLL</b><br><br>5–15 dakika sürebilir. Başlatılsın mı?", "en": "All packages below will be installed in order:<br><br>• <b>Visual C++ Redistributable</b> (2005–2022 x86/x64)<br>• <b>msvcp140*.dll Direct Repair</b><br>• <b>DirectX 9/10/11/12</b> (DXVK, VKD3D)<br>• <b>Microsoft .NET</b> (6.0 & 8.0 LTS + 4.8)<br>• <b>Python 3.12</b> + <b>Java JRE 21 LTS</b><br>• <b>Fonts & System DLLs</b><br><br>May take 5–15 min. Start now?", "de": "Alle Pakete werden der Reihe nach installiert:<br><br>• <b>Visual C++ Redistributable</b> (2005–2022 x86/x64)<br>• <b>msvcp140*.dll Direkt-Reparatur</b><br>• <b>DirectX 9/10/11/12</b> (DXVK, VKD3D)<br>• <b>Microsoft .NET</b> (6.0 & 8.0 LTS + 4.8)<br>• <b>Python 3.12</b> + <b>Java JRE 21 LTS</b><br>• <b>Schriften & System-DLLs</b><br><br>Dauert 5–15 Min. Jetzt starten?"},
+    "d_rtall_q": {"tr": "Aşağıdaki tüm paketler <b>{prefix}</b> önekine sırayla kurulacak:<br><br>• <b>Visual C++ Redistributable</b> (2005–2022 x86/x64)<br>• <b>msvcp140*.dll Doğrudan Onarımı</b><br>• <b>DirectX 9/10/11/12</b> (DXVK, VKD3D)<br>• <b>Microsoft .NET</b> (6.0 & 8.0 LTS + 4.8)<br>• <b>Python 3.12</b> + <b>Java JRE 21 LTS</b><br>• <b>Yazı Tipleri & Sistem DLL</b><br><br>5–15 dakika sürebilir. Başlatılsın mı?", "en": "All packages below will be installed into <b>{prefix}</b> in order:<br><br>• <b>Visual C++ Redistributable</b> (2005–2022 x86/x64)<br>• <b>msvcp140*.dll Direct Repair</b><br>• <b>DirectX 9/10/11/12</b> (DXVK, VKD3D)<br>• <b>Microsoft .NET</b> (6.0 & 8.0 LTS + 4.8)<br>• <b>Python 3.12</b> + <b>Java JRE 21 LTS</b><br>• <b>Fonts & System DLLs</b><br><br>May take 5–15 min. Start now?", "de": "Alle Pakete werden der Reihe nach in <b>{prefix}</b> installiert:<br><br>• <b>Visual C++ Redistributable</b> (2005–2022 x86/x64)<br>• <b>msvcp140*.dll Direkt-Reparatur</b><br>• <b>DirectX 9/10/11/12</b> (DXVK, VKD3D)<br>• <b>Microsoft .NET</b> (6.0 & 8.0 LTS + 4.8)<br>• <b>Python 3.12</b> + <b>Java JRE 21 LTS</b><br>• <b>Schriften & System-DLLs</b><br><br>Dauert 5–15 Min. Jetzt starten?"},
     "d_shortcuts_t": {"tr": "Simgeler ve Kısayollar Onarıldı", "en": "Icons & Shortcuts Repaired", "de": "Icons & Verknüpfungen repariert"},
     "d_shortcuts_q": {"tr": "KDE Başlat Menüsü simge önbelleğinin anında yenilenmesi için masaüstü paneli şimdi yeniden başlatılsın mı? (1-2 saniye sürer, açık uygulamalar kapanmaz)", "en": "Restart the desktop panel now to instantly refresh the KDE start-menu icon cache? (takes 1-2s, open apps stay open)", "de": "Desktop-Panel jetzt neu starten, um KDE-Icon-Cache sofort zu aktualisieren? (dauert 1–2 s, offene Apps bleiben offen)"},
     "d_shortcuts_gen": {"tr": "Resmi Substance 3D (<b>Pt, Sa, Ds</b>) simgeleri üretildi:", "en": "Official Substance 3D (<b>Pt, Sa, Ds</b>) icons generated:", "de": "Offizielle Substance-3D-Icons (<b>Pt, Sa, Ds</b>) erzeugt:"},
@@ -230,7 +229,7 @@ def t(key, **kw):
     except Exception:
         return s
 
-# ------------------------------------------------------------------ ayarlar
+# ------------------------------------------------------------------ settings
 WINE_PREFIX  = os.environ.get("WINEPREFIX", os.environ.get("WINE_PREFIX", os.path.expanduser("~/.wine")))
 WINE_ROOT    = "/opt/wine-patched"
 WINE_BIN     = f"{WINE_ROOT}/bin/wine"
@@ -256,35 +255,35 @@ MSVCP140_DLLS = (
     "msvcp140_codecvt_ids",
     "vcruntime140",
 )
-# vcruntime140_1 ve vcruntime140_threads yalnızca 64-bit pakette bulunur (x86 redist'te yok)
+# vcruntime140_1 and vcruntime140_threads exist only in the 64-bit package (not in x86 redist)
 MSVCP140_DLLS_X64_ONLY = (
     "vcruntime140_1",
     "vcruntime140_threads",
 )
 
-# (Klasör/Exe Adı, Görünür Ad, Alt Başlık, Açıklama, Simge Adları, Resmi Adobe Kodu[, Gerçek Exe Adı])
-# Gerçek Exe Adı verilmezse klasör adıyla aynı varsayılır (Substance uygulamaları böyledir).
+# (Folder/Exe name, Display name, Subtitle, Description, Icon names, Official Adobe code[, Real Exe name])
+# If no real exe name is given, the folder name is assumed (true for Substance apps).
 APPS = [
     ("Adobe Substance 3D Sampler",  "Substance 3D Sampler",
-     "Materyal üretimi ve tarama",
-     "Fotoğraflardan veya taranmış yüzeylerden PBR materyal üretir. 3D görünüm yamalı Wine ile render edilir.",
+     "Material authoring and capture",
+     "Creates PBR materials from photos or scanned surfaces. 3D view renders via patched Wine.",
      ("substance-3d-sampler", "adobe-substance-sampler"), "Sa"),
     ("Adobe Substance 3D Designer", "Substance 3D Designer",
-     "Düğüm tabanlı materyal yazarlığı",
-     "Prosedürel materyalleri düğümlerle kurar ve dışa aktarır. 3D görünüm yamalı Wine ile render edilir.",
+     "Node-based material authoring",
+     "Builds and exports procedural materials with nodes. 3D view renders via patched Wine.",
      ("substance-3d-designer", "adobe-substance-designer"), "Ds"),
     ("Adobe Substance 3D Painter",  "Substance 3D Painter",
-     "3D yüzey boyama",
-     "3D modellerin üzerinde fırçalarla boyama yapar. DİKKAT: açılışta Adobe girişi gerektirir.",
+     "3D surface painting",
+     "Paints directly on 3D models with brushes. NOTE: requires Adobe login on launch.",
      ("substance-3d-painter", "adobe-substance-painter"), "Pt"),
     ("Adobe Audition 2026",  "Adobe Audition",
-     "Ses düzenleme ve miksaj",
-     "Çok izli ses düzenleme, miksaj ve mastering. Ses çıkışı winepulse (PipeWire/PulseAudio) üzerinden çalışır.",
+     "Audio editing and mixing",
+     "Multitrack editing, mixing and mastering. Audio via winepulse (PipeWire/PulseAudio).",
      ("adobe-audition", "substance-adobe-audition"), "Au", "Adobe Audition"),
 ]
 
 def app_exe_name(t):
-    """APPS girdisinin gerçek exe adını döndürür (7. alan yoksa klasör adı)."""
+    """Return the real exe name of an APPS entry (folder name if 7th field is missing)."""
     return t[6] if len(t) > 6 else t[0]
 
 PATCH_OLD = """            HANDLE shared = import_win32->handle;
@@ -297,12 +296,12 @@ PATCH_NEW = """            HANDLE shared = import_win32->handle;
             if (!shared) break;
             memory->local = d3dkmt_open_resource( 0, shared, &memory->mutex, &memory->sync );"""
 
-# ------------------------------------------------------------------ yardımcılar
+# ------------------------------------------------------------------ helpers
 def have(cmd):
     return shutil.which(cmd) is not None
 
 def sh(cmd, **kw):
-    """Tek komut çalıştır, çıktıyı döndür."""
+    """Run a single command, return its output."""
     try:
         return subprocess.run(cmd, shell=isinstance(cmd, str), capture_output=True,
                               text=True, **kw)
@@ -310,7 +309,7 @@ def sh(cmd, **kw):
         return e
 
 def root_cmd(argv):
-    """Yönetici yetkisiyle çalıştır: önce sudo -n, olmazsa pkexec."""
+    """Run with admin rights: try sudo -n first, else pkexec."""
     if subprocess.run(["sudo", "-n", "true"], capture_output=True).returncode == 0:
         return ["sudo"] + argv
     if have("pkexec"):
@@ -327,7 +326,7 @@ def cleanup_leftover_shm():
 GUARD_PKGS = ["wine-patched", "mingw-w64-headers", "mingw-w64-crt", "mingw-w64-winpthreads"]
 
 def guard_ok():
-    """pacman'ın bu paketlere dokunmadığını doğrula."""
+    """Verify that pacman will not touch these packages."""
     try:
         with open("/etc/pacman.conf", encoding="utf-8", errors="replace") as f:
             for ln in f:
@@ -339,7 +338,7 @@ def guard_ok():
     return False
 
 def apply_guard():
-    """IgnorePkg korumasını uygula. Başarı -> True."""
+    """Apply the IgnorePkg guard. Success -> True."""
     if guard_ok():
         return True
     cmd = ["bash", "-c",
@@ -348,7 +347,7 @@ def apply_guard():
     sh(root_cmd(cmd))
     return guard_ok()
 
-# ------------------------------------------------------------------ hatasız PNG ve SVG simge üretici
+# ------------------------------------------------------------------ lossless PNG and SVG icon generator
 def _write_svg_icon(out_svg, badge_text, bg_hex="#133820", fg_hex="#2ee66b"):
     svg = f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
@@ -487,7 +486,7 @@ Keywords=Adobe;Substance;Wine;Painter;Designer;Sampler;Audition;3D;
     with open(PANEL_DESKTOP, "w", encoding="utf-8") as f:
         f.write(panel_desk_content)
     os.chmod(PANEL_DESKTOP, 0o755)
-    logs.append(f"✔ Panel simgesi üretildi: {panel_png}")
+    logs.append(f"✔ Panel icon created: {panel_png}")
 
     app_desktop_contents = {}
     for app in APPS:
@@ -503,7 +502,7 @@ Keywords=Adobe;Substance;Wine;Painter;Designer;Sampler;Audition;3D;
         primary_png = os.path.join(ICON_PNG_DIR, f"{icon_names[0]}.png")
         ok = render_substance_icon_png(primary_png, badge_txt, bg_hex=bg_hex, fg_hex=fg_hex)
         if not ok:
-            raise RuntimeError(f"{primary_png} oluşturulamadı!")
+            raise RuntimeError(f"{primary_png} could not be created!")
 
         for name in icon_names:
             dst_png = os.path.join(ICON_PNG_DIR, f"{name}.png")
@@ -553,7 +552,7 @@ Keywords={kw}
                         with open(full_p, "w", encoding="utf-8") as f:
                             f.write(new_desk_txt)
                         os.chmod(full_p, 0o755)
-                        logs.append(f"• Ek kısayol güncellendi: {full_p}")
+                        logs.append(f"• Extra shortcut updated: {full_p}")
                     except Exception:
                         pass
 
@@ -571,10 +570,10 @@ Keywords={kw}
         sh(["dbus-send", "--session", "--type=signal", "/KGlobalSettings",
             "org.kde.KGlobalSettings.notifyChange", "int32:4", "int32:0"])
 
-    logs.append("✔ Başlat menüsü ve KDE Plasma simge önbelleği güncellendi.")
+    logs.append("✔ Start menu and KDE Plasma icon cache refreshed.")
     return logs
 
-# ------------------------------------------------------------------ sistem ve gereksinim taraması
+# ------------------------------------------------------------------ system and runtime scan
 def wine_core_ok():
     return (
         sh(["pacman", "-Q", PKGNAME]).returncode == 0
@@ -600,10 +599,10 @@ def msvcp140_dlls_ok():
     return both and x64only
 
 def audio_backend_ok():
-    """Wine ses sürücüsü winepulse (PipeWire/PulseAudio) ise True.
+    """True if the Wine audio driver is winepulse (PipeWire/PulseAudio).
 
-    Audio değeri yoksa Wine öntanımlıyı kullanır (derlemede pulse varsa OK).
-    alsa/oss/jack yazıyorsa Audition'da sorun çıkarır.
+    If no Audio value is set, Wine uses its default (OK if built with pulse).
+    alsa/oss/jack values break Audition.
     """
     try:
         r = sh([WINE_BIN, "reg", "query", "HKCU\\Software\\Wine\\Drivers", "/v", "Audio"],
@@ -616,7 +615,7 @@ def audio_backend_ok():
         return True
 
 def check_runtimes_status():
-    """Wine önekindeki (WINEPREFIX) kurulu çalışma zamanı paketlerini denetler."""
+    """Check the runtime packages installed in the Wine prefix (WINEPREFIX)."""
     sys32 = f"{WINE_PREFIX}/drive_c/windows/system32"
     syswow = f"{WINE_PREFIX}/drive_c/windows/syswow64"
     pfiles = f"{WINE_PREFIX}/drive_c/Program Files"
@@ -638,7 +637,7 @@ def check_runtimes_status():
         (".NET Framework / .NET Desktop", net_ok),
         ("Python 3 (Windows 64-bit)", py_ok),
         ("Java JRE 21 LTS (Windows 64-bit)", java_ok),
-        ("Temel Yazı Tipleri (Corefonts)", fnt_ok),
+        ("Core Fonts (Corefonts)", fnt_ok),
     ]
     done_cnt = sum(1 for _, v in items if v)
     return done_cnt, len(items), items
@@ -655,22 +654,22 @@ def check_system(include_environment=False):
                 bad += 1
                 rows.append(("bad", txt))
             else:
-                rows.append(("warn", f"{txt} (opsiyonel / kurulu değil)"))
+                rows.append(("warn", f"{txt} (optional / not installed)"))
 
     res = sh(["pacman", "-Q", PKGNAME])
-    line("Yamalı Wine paketi (pacman)", getattr(res, "returncode", 1) == 0)
-    line(f"wine çalıştırılabilir ({WINE_BIN})", os.access(WINE_BIN, os.X_OK))
-    line("wineserver mevcut", os.access(f"{WINE_ROOT}/bin/wineserver", os.X_OK))
-    line("64-bit modüller (x86_64-windows)", bool(glob_dll("x86_64-windows")))
-    line("32-bit modüller (i386-windows)", bool(glob_dll("i386-windows")))
-    line("win32u.so derlenmiş", os.path.isfile(f"{WINE_ROOT}/lib/wine/x86_64-unix/win32u.so"))
-    line("tek wineserver çalışıyor", count_wineserver() <= 1)
-    line("wine.desktop masaüstü kaydı", os.path.isfile(WINE_DESKTOP))
-    line(".exe varsayılanı Wine", default_exe_handler() == "wine.desktop")
-    line("wine komutu /usr/bin'de", os.access("/usr/bin/wine", os.X_OK))
-    line("pacman IgnorePkg koruması", guard_ok())
-    line("Panel başlat menüsü kısayolu", os.path.isfile(PANEL_DESKTOP))
-    line("Adobe kısayolları ve simge dosyaları", shortcuts_and_icons_ok())
+    line("Patched Wine package (pacman)", getattr(res, "returncode", 1) == 0)
+    line(f"wine executable ({WINE_BIN})", os.access(WINE_BIN, os.X_OK))
+    line("wineserver present", os.access(f"{WINE_ROOT}/bin/wineserver", os.X_OK))
+    line("64-bit modules (x86_64-windows)", bool(glob_dll("x86_64-windows")))
+    line("32-bit modules (i386-windows)", bool(glob_dll("i386-windows")))
+    line("win32u.so compiled", os.path.isfile(f"{WINE_ROOT}/lib/wine/x86_64-unix/win32u.so"))
+    line("single wineserver running", count_wineserver() <= 1)
+    line("wine.desktop desktop entry", os.path.isfile(WINE_DESKTOP))
+    line("default .exe handler is Wine", default_exe_handler() == "wine.desktop")
+    line("wine command in /usr/bin", os.access("/usr/bin/wine", os.X_OK))
+    line("pacman IgnorePkg guard", guard_ok())
+    line("Panel start-menu shortcut", os.path.isfile(PANEL_DESKTOP))
+    line("Adobe shortcuts and icon files", shortcuts_and_icons_ok())
     line("system32+syswow64 msvcp140/vcruntime DLL'leri (7 adet x2)", msvcp140_dlls_ok(), critical=False)
 
     for app in APPS:
@@ -678,30 +677,30 @@ def check_system(include_environment=False):
         ex = app_exe_name(app)
         dfile = os.path.join(WINE_PROGS_DIR, f"{d}.desktop")
         ic = resolve_app_icon(icon_names)
-        line(f"{nm} menü kısayolu ve simgesi", os.path.isfile(dfile) and ic != "wine", critical=True)
+        line(f"{nm} menu shortcut and icon", os.path.isfile(dfile) and ic != "wine", critical=True)
         line(f"{nm} (.exe)", os.path.isfile(f"{WINE_PREFIX}/drive_c/Program Files/Adobe/{d}/{ex}.exe"), critical=False)
-    line("Ses backend (winepulse/PipeWire)", audio_backend_ok(), critical=False)
+    line("Audio backend (winepulse/PipeWire)", audio_backend_ok(), critical=False)
 
     if include_environment:
-        # Ek ortam kontrolleri yalnızca kullanıcı tanılamayı istediğinde çalışır.
+        # Extra environment checks run only when the user requests diagnostics.
         prefix_ok = os.path.isdir(f"{WINE_PREFIX}/drive_c")
-        line("Wine öneki başlatılmış (drive_c)", prefix_ok, critical=False)
-        line("Wine öneki kayıt defteri dosyaları", all(
+        line("Wine prefix initialized (drive_c)", prefix_ok, critical=False)
+        line("Wine prefix registry files", all(
             os.path.isfile(os.path.join(WINE_PREFIX, name)) for name in ("system.reg", "user.reg")
         ), critical=False)
         try:
             disk_free_gb = shutil.disk_usage(WINE_PREFIX if os.path.isdir(WINE_PREFIX) else os.path.expanduser("~")).free / (1024 ** 3)
-            line(f"Boş disk alanı (en az 5 GB önerilir; {disk_free_gb:.1f} GB boş)", disk_free_gb >= 5, critical=False)
+            line(f"Free disk space (5 GB recommended; {disk_free_gb:.1f} GB free)", disk_free_gb >= 5, critical=False)
         except OSError:
-            line("Boş disk alanı okunabiliyor", False, critical=False)
+            line("Free disk space readable", False, critical=False)
         if have("vulkaninfo"):
             vk = sh(["vulkaninfo", "--summary"], timeout=4)
-            line("Vulkan aygıtı erişilebilir", getattr(vk, "returncode", 1) == 0, critical=False)
+            line("Vulkan device accessible", getattr(vk, "returncode", 1) == 0, critical=False)
         else:
-            line("Vulkan tanılama aracı (vulkaninfo)", False, critical=False)
+            line("Vulkan diagnostic tool (vulkaninfo)", False, critical=False)
 
     for r_name, r_ok in check_runtimes_status()[2]:
-        line(f"Wine Gereksinimi: {r_name}", r_ok, critical=False)
+        line(f"Wine runtime: {r_name}", r_ok, critical=False)
 
     return ok, bad, rows
 
@@ -726,7 +725,7 @@ def default_exe_handler():
     except Exception:
         return ""
 
-# ------------------------------------------------------------------ iş parçacığı
+# ------------------------------------------------------------------ worker thread
 class Worker(QThread):
     line = pyqtSignal(str)
     done = pyqtSignal(int)
@@ -752,7 +751,7 @@ class Worker(QThread):
             self.line.emit(f"!! {ex}")
             self.done.emit(1)
 
-# ------------------------------------------------------------------ günlük penceresi
+# ------------------------------------------------------------------ log window
 class LogDialog(QDialog):
     def __init__(self, title, parent=None):
         super().__init__(parent)
@@ -809,7 +808,7 @@ class LogDialog(QDialog):
         self.show()
         self.w.start()
 
-# ------------------------------------------------------------------ kart
+# ------------------------------------------------------------------ card
 class Card(QFrame):
     clicked = pyqtSignal()
 
@@ -897,7 +896,7 @@ class Card(QFrame):
             self.clicked.emit()
         super().mousePressEvent(e)
 
-# ------------------------------------------------------------------ tema
+# ------------------------------------------------------------------ theme
 def build_theme(app):
     win = app.palette().color(app.palette().ColorRole.Window)
     dark = win.lightness() < 128
@@ -915,7 +914,7 @@ def build_theme(app):
         warn="#c9821a", bad="#d0402f", scroll="#e6eaf2",
     )
 
-# ------------------------------------------------------------------ ana pencere
+# ------------------------------------------------------------------ main window
 class Panel(QWidget):
     def __init__(self):
         super().__init__()
@@ -923,7 +922,7 @@ class Panel(QWidget):
         try:
             fix_shortcuts_and_icons()
         except Exception as e:
-            print("Simge oluşturma uyarısı:", e, file=sys.stderr)
+            print("Icon creation warning:", e, file=sys.stderr)
 
         self.theme = build_theme(QApplication.instance())
         self.setWindowTitle(t("window_title"))
@@ -936,7 +935,7 @@ class Panel(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # ---- başlık bandı
+        # ---- header bar
         head = QFrame()
         head.setObjectName("head")
         head.setStyleSheet(f"""
@@ -978,7 +977,7 @@ class Panel(QWidget):
         hl.addLayout(pill_row)
         root.addWidget(head)
 
-        # ---- sekmeli gövde (QTabWidget)
+        # ---- tabbed body (QTabWidget)
         self.tabs = QTabWidget()
         self.tabs.setStyleSheet(f"""
             QTabWidget::pane {{
@@ -1007,7 +1006,7 @@ class Panel(QWidget):
             }}
         """)
 
-        # Sekme 1: Uygulamalar ve Sistem
+        # Tab 1: Apps and System
         self.app_cards = []
         tab1 = self._build_scroll_tab(
             t("section_apps"),
@@ -1059,7 +1058,7 @@ class Panel(QWidget):
             collect_app_cards=True
         )
 
-        # Sekme 2: Gereksinimler ve Runtimes (VCRedist, DLL Fix, .NET, DirectX, Java, Python)
+        # Tab 2: Runtimes (VCRedist, DLL Fix, .NET, DirectX, Java, Python)
         tab2 = self._build_scroll_tab(
             t("section_reqs"),
             [
@@ -1107,7 +1106,7 @@ class Panel(QWidget):
         self.tabs.addTab(tab2, t("tab_reqs"))
         root.addWidget(self.tabs, 1)
 
-        # ---- alt bilgi
+        # ---- footer
         foot = QFrame()
         foot.setObjectName("foot")
         foot.setStyleSheet(f"background:{self.theme['panel']}; border-top:1px solid {self.theme['cardBorder']};")
@@ -1271,7 +1270,7 @@ class Panel(QWidget):
         exe = f"{WINE_PREFIX}/drive_c/Program Files/Adobe/{folder}/{ex}.exe"
         if not os.path.isfile(exe):
             self._msg(f"{name} " + t("d_notfound_suf"),
-                      f"<b>{exe}</b> bulunamadı.<br><br>" + t("d_notfound_b"), True)
+                      f"<b>{exe}</b> not found.<br><br>" + t("d_notfound_b"), True)
             return
         env = dict(os.environ, WINEPREFIX=WINE_PREFIX)
         subprocess.Popen([WINE_BIN, f"C:\\Program Files\\Adobe\\{folder}\\{ex}.exe"],
@@ -1286,7 +1285,7 @@ class Panel(QWidget):
     def act_audition(self): self._launch("Adobe Audition 2026", "Adobe Audition", "Adobe Audition")
 
     def act_audio_fix(self):
-        """Audition'a özel onarım: ses backend'ini winepulse'a sabitle + kısayolları üret."""
+        """Audition-specific repair: pin audio backend to winepulse + rebuild shortcuts."""
         if not self._require_wine():
             return
         env = dict(os.environ, WINEPREFIX=WINE_PREFIX)
@@ -1309,7 +1308,7 @@ class Panel(QWidget):
         if not self._require_wine():
             return
         if not self._ask(t("d_rtall_t"),
-                         t("d_rtall_q").replace("önekine", f"<b>{WINE_PREFIX}</b> önekine")):
+                         t("d_rtall_q", prefix=WINE_PREFIX)):
             return
         self._run_script(t("t_all_rt"), RT_ALL_SCRIPT)
 
@@ -1352,7 +1351,7 @@ class Panel(QWidget):
         if not self._require_wine():
             return
         if not have("winetricks"):
-            self._run_script(t("t_wt"), RT_PREP_HEADER + "\necho '✔ winetricks hazır.'\n")
+            self._run_script(t("t_wt"), RT_PREP_HEADER + "\necho '✔ winetricks ready.'\n")
         env = dict(os.environ, WINEPREFIX=WINE_PREFIX, WINE=WINE_BIN, WINESERVER=WINESERVER)
         subprocess.Popen(["winetricks", "--gui"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
 
@@ -1408,7 +1407,7 @@ class Panel(QWidget):
         self._run_script(t("t_sys_repair"), REPAIR_SCRIPT)
 
     def act_diagnose(self):
-        """Yalnızca oku: sorunları tara ve her bulgu için ilgili panel eylemini öner."""
+        """Read-only: scan for issues and suggest the matching panel action."""
         try:
             ok, bad, rows = check_system(include_environment=True)
             _, _, runtime_rows = check_runtimes_status()
@@ -1426,19 +1425,19 @@ class Panel(QWidget):
         for _, text in issues:
             low = text.lower()
             if "vulkan" in low:
-                guidance.append("Grafik sürücünüzün Vulkan desteğini ve Vulkan paketlerini kontrol edin; tanılama aracı yoksa vulkan-tools kurun.")
+                guidance.append(t("g_vulkan"))
             elif "disk" in low:
-                guidance.append("Wine öneki ve Adobe kurulumları için diskte yer açın; 5 GB altındaki boş alan kurulumları aksatabilir.")
+                guidance.append(t("g_disk"))
             elif "öneki" in low:
-                guidance.append("Seçili WINEPREFIX doğru mu kontrol edin. Önek eksikse önce Wine ile başlatın veya uygulamayı yeniden kurun.")
+                guidance.append(t("g_prefix"))
             elif "ses" in low or "audio" in low:
-                guidance.append("Audition ses sorunlarında PipeWire/PulseAudio hizmetini ve paneldeki Audition ses onarımını kontrol edin.")
+                guidance.append(t("g_audio"))
             elif "gereksinimi" in low or any(rt.lower() in low for rt in missing_rt):
-                guidance.append("Eksik isteğe bağlı Windows bileşenlerini Gereksinimler sekmesinden kurun.")
+                guidance.append(t("g_rt"))
             elif status == "bad":
-                guidance.append("Kritik Wine veya panel yapılandırması eksik. Sistemi Denetle / Onar seçeneği ilgili onarım adımlarını sunar.")
+                guidance.append(t("g_crit"))
             elif "kısayol" in low or "simge" in low:
-                guidance.append("Simgeleri ve Kısayolları Onar eylemiyle başlat menüsü kayıtlarını yenileyin.")
+                guidance.append(t("g_short"))
         guidance = list(dict.fromkeys(guidance))
         details = "<br>".join(f"{icons.get(status, '•')} {text}" for status, text in safe_rows)
         if not guidance:
@@ -1517,7 +1516,7 @@ class Panel(QWidget):
                            border-radius:8px; padding:8px 20px; font-weight:600; min-width:80px; }}
             QPushButton:hover {{ background: {t["accent2"]}; }}"""
 
-# ------------------------------------------------------------------ Wine Gereksinimleri (Runtimes) Betikleri
+# ------------------------------------------------------------------ Wine runtime scripts
 RT_PREP_HEADER = f'''
 set -u
 export WINEPREFIX="{WINE_PREFIX}"
@@ -1528,12 +1527,12 @@ RT_CACHE="{WORK}/runtimes"
 mkdir -p "$RT_CACHE"
 
 if ! command -v winetricks >/dev/null 2>&1 || ! command -v cabextract >/dev/null 2>&1; then
-  echo "▸ Sistem paketleri kontrol ediliyor (winetricks, cabextract, unzip, curl)..."
+  echo "▸ Checking system packages (winetricks, cabextract, unzip, curl)..."
   if sudo -n true 2>/dev/null; then ROOTCMD=(sudo); elif command -v pkexec >/dev/null; then ROOTCMD=(pkexec); else ROOTCMD=(sudo); fi
   ${{ROOTCMD[@]}} pacman -S --needed --noconfirm winetricks cabextract unzip p7zip curl wget zenity
 fi
 
-echo "▸ Wine öneki ({WINE_PREFIX}) hazırlanıyor ve Windows 11 moduna ayarlanıyor..."
+echo "▸ Preparing Wine prefix ({WINE_PREFIX}) and setting Windows 11 mode..."
 "{WINE_BIN}" wineboot -u 2>/dev/null || true
 winetricks -q win11 2>/dev/null || true
 "{WINE_BIN}" reg add 'HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion' /v CurrentBuildNumber /d 26300 /f 2>/dev/null || true
@@ -1543,7 +1542,7 @@ winetricks -q win11 2>/dev/null || true
 
 RT_DLLFIX_BODY = '''
 echo "════════════════════════════════════════════════════════════"
-echo "▸ msvcp140 + vcruntime140 (VC++ 2022 x64+x86) Doğrudan DLL Onarımı"
+echo "▸ msvcp140 + vcruntime140 (VC++ 2022 x64+x86) Direct DLL Repair"
 echo "════════════════════════════════════════════════════════════"
 SYS32="$WINEPREFIX/drive_c/windows/system32"
 SYSWOW="$WINEPREFIX/drive_c/windows/syswow64"
@@ -1561,12 +1560,12 @@ mkdir -p "$SYS32" "$SYSWOW"
 
 if [[ -s "$WT_X64" ]]; then
   VC_X64="$WT_X64"
-  echo "  -> Winetricks önbelleğindeki vc_redist.x64.exe bulundu."
+  echo "  -> Found vc_redist.x64.exe in winetricks cache."
 elif [[ -s "$RT_CACHE/vc_redist.x64.exe" ]]; then
   VC_X64="$RT_CACHE/vc_redist.x64.exe"
-  echo "  -> Panel önbelleğindeki vc_redist.x64.exe bulundu."
+  echo "  -> Found vc_redist.x64.exe in panel cache."
 else
-  echo "  -> vc_redist.x64.exe indiriliyor..."
+  echo "  -> Downloading vc_redist.x64.exe..."
   mkdir -p "$HOME/.cache/winetricks/vcrun2022"
   curl -fL -o "$HOME/.cache/winetricks/vcrun2022/vc_redist.x64.exe" "https://aka.ms/vs/17/release/vc_redist.x64.exe"
   VC_X64="$HOME/.cache/winetricks/vcrun2022/vc_redist.x64.exe"
@@ -1574,18 +1573,18 @@ fi
 
 if [[ -s "$WT_X86" ]]; then
   VC_X86="$WT_X86"
-  echo "  -> Winetricks önbelleğindeki vc_redist.x86.exe bulundu."
+  echo "  -> Found vc_redist.x86.exe in winetricks cache."
 elif [[ -s "$RT_CACHE/vc_redist.x86.exe" ]]; then
   VC_X86="$RT_CACHE/vc_redist.x86.exe"
-  echo "  -> Panel önbelleğindeki vc_redist.x86.exe bulundu."
+  echo "  -> Found vc_redist.x86.exe in panel cache."
 else
-  echo "  -> vc_redist.x86.exe indiriliyor (syswow64 için gerekli)..."
+  echo "  -> Downloading vc_redist.x86.exe (needed for syswow64)..."
   mkdir -p "$HOME/.cache/winetricks/vcrun2022"
   curl -fL -o "$HOME/.cache/winetricks/vcrun2022/vc_redist.x86.exe" "https://aka.ms/vs/17/release/vc_redist.x86.exe"
   VC_X86="$HOME/.cache/winetricks/vcrun2022/vc_redist.x86.exe"
 fi
 
-echo "  -> /tmp/vc64 (x64) açılıyor..."
+echo "  -> Extracting /tmp/vc64 (x64)..."
 rm -rf /tmp/vc64
 mkdir -p "$SRC64"
 cd /tmp/vc64
@@ -1595,7 +1594,7 @@ for f in a*; do
   [[ -f "$f" ]] && cabextract -q -d out "$f" -F '*vcruntime140*' 2>/dev/null || true
 done
 
-echo "  -> /tmp/vc86 (x86) açılıyor..."
+echo "  -> Extracting /tmp/vc86 (x86)..."
 rm -rf /tmp/vc86
 mkdir -p "$SRC86"
 cd /tmp/vc86
@@ -1605,7 +1604,7 @@ for f in a*; do
   [[ -f "$f" ]] && cabextract -q -d out "$f" -F '*vcruntime140*' 2>/dev/null || true
 done
 
-echo "  -> 64-bit DLL'ler system32'ye kopyalanıyor..."
+echo "  -> Copying 64-bit DLLs to system32..."
 for n in $DLLS_COMMON $DLLS_X64ONLY; do
   if [[ -f "$SRC64/${n}.dll_amd64" ]]; then
     cp -f "$SRC64/${n}.dll_amd64" "$SYS32/${n}.dll"
@@ -1614,11 +1613,11 @@ for n in $DLLS_COMMON $DLLS_X64ONLY; do
     cp -f "$SRC64/${n}.dll" "$SYS32/${n}.dll"
     echo "     ✔ ${n}.dll -> system32/${n}.dll"
   else
-    echo "     ! Uyarı: ${n} (x64) kaynağı bulunamadı!"
+    echo "     ! Warning: ${n} (x64) source not found!"
   fi
 done
 
-echo "  -> 32-bit DLL'ler syswow64'e kopyalanıyor (vcruntime140_1 x86'da yok, atlanır)..."
+echo "  -> Copying 32-bit DLLs to syswow64 (vcruntime140_1 has no x86, skipped)..."
 for n in $DLLS_COMMON; do
   if [[ -f "$SRC86/${n}.dll_x86" ]]; then
     cp -f "$SRC86/${n}.dll_x86" "$SYSWOW/${n}.dll"
@@ -1627,119 +1626,119 @@ for n in $DLLS_COMMON; do
     cp -f "$SRC86/${n}.dll" "$SYSWOW/${n}.dll"
     echo "     ✔ ${n}.dll -> syswow64/${n}.dll"
   else
-    echo "     ! Uyarı: ${n} (x86) kaynağı bulunamadı!"
+    echo "     ! Warning: ${n} (x86) source not found!"
   fi
 done
 
-echo "  -> DLL override'lar native,builtin olarak ayarlanıyor..."
+echo "  -> Setting DLL overrides to native,builtin..."
 for n in $DLLS; do
   "$WINE" reg add 'HKCU\\Software\\Wine\\DllOverrides' /v "*${n}" /d 'native,builtin' /f 2>/dev/null || true
 done
 
-echo "  -> system32 durumu:"
+echo "  -> system32 status:"
 ls -l "$SYS32"/msvcp140*.dll "$SYS32"/vcruntime140*.dll
-echo "  -> syswow64 durumu:"
+echo "  -> syswow64 status:"
 ls -l "$SYSWOW"/msvcp140*.dll "$SYSWOW"/vcruntime140*.dll
 
-echo "  -> wineserver yeniden başlatılıyor (-k)..."
+echo "  -> Restarting wineserver (-k)..."
 "$WINESERVER" -k 2>/dev/null || true
-echo "✔ msvcp140+vcruntime140 doğrudan DLL onarımı tamamlandı (x64+x86)."
+echo "✔ msvcp140+vcruntime140 direct DLL repair done (x64+x86)."
 '''
 
 RT_VCREDIST_BODY = '''
 echo "════════════════════════════════════════════════════════════"
-echo "▸ Visual C++ Redistributable (2005–2022) Paketleri Kuruluyor"
+echo "▸ Installing Visual C++ Redistributable (2005-2022) packages"
 echo "════════════════════════════════════════════════════════════"
 for pkg in vcrun2005 vcrun2008 vcrun2010 vcrun2012 vcrun2013 vcrun2022; do
-  echo "  -> $pkg kuruluyor..."
-  winetricks -q --force "$pkg" || echo "  ! $pkg winetricks ile uyarı döndürdü, devam ediliyor..."
+  echo "  -> Installing $pkg..."
+  winetricks -q --force "$pkg" || echo "  ! $pkg returned a winetricks warning, continuing..."
 done
 
-echo "  -> Güncel Microsoft VC++ 2015-2022 (x86 ve x64) doğrudan doğrulanıyor..."
+echo "  -> Verifying latest Microsoft VC++ 2015-2022 (x86 and x64) directly..."
 curl -fL -o "$RT_CACHE/vc_redist.x64.exe" "https://aka.ms/vs/17/release/vc_redist.x64.exe" \
   && "$WINE" "$RT_CACHE/vc_redist.x64.exe" /install /quiet /norestart || true
 curl -fL -o "$RT_CACHE/vc_redist.x86.exe" "https://aka.ms/vs/17/release/vc_redist.x86.exe" \
   && "$WINE" "$RT_CACHE/vc_redist.x86.exe" /install /quiet /norestart || true
 "$WINESERVER" -w || true
-echo "✔ Visual C++ 2005-2022 kurulumu tamamlandı."
+echo "✔ Visual C++ 2005-2022 setup done."
 ''' + RT_DLLFIX_BODY
 
 RT_DIRECTX_BODY = '''
 echo "════════════════════════════════════════════════════════════"
-echo "▸ DirectX 9/10/11/12, DXVK, VKD3D ve HLSL Derleyicileri Kuruluyor"
+echo "▸ Installing DirectX 9/10/11/12, DXVK, VKD3D and HLSL compilers"
 echo "════════════════════════════════════════════════════════════"
 for dxpkg in d3dx9 d3dx10 d3dx11_43 d3dcompiler_43 d3dcompiler_47 dxvk vkd3d; do
-  echo "  -> $dxpkg kuruluyor..."
-  winetricks -q "$dxpkg" || echo "  ! $dxpkg kurulumunda uyarı oluştu, devam ediliyor..."
+  echo "  -> Installing $dxpkg..."
+  winetricks -q "$dxpkg" || echo "  ! Warning during $dxpkg install, continuing..."
 done
 "$WINESERVER" -w || true
-echo "✔ DirectX, DXVK ve VKD3D kurulumu tamamlandı."
+echo "✔ DirectX, DXVK and VKD3D setup done."
 '''
 
 RT_DOTNET_BODY = '''
 echo "════════════════════════════════════════════════════════════"
-echo "▸ Microsoft .NET Desktop Runtime (6.0 & 8.0) ve .NET 4.8 Kuruluyor"
+echo "▸ Installing Microsoft .NET Desktop Runtime (6.0 & 8.0) and .NET 4.8"
 echo "════════════════════════════════════════════════════════════"
-echo "  -> wine-mono kaldırılıyor (gerçek Microsoft .NET ile çakışmaması için)..."
+echo "  -> Removing wine-mono (to avoid conflict with real Microsoft .NET)..."
 "$WINE" uninstaller --remove "{E45D8920-A758-4088-B6C6-31DBB276992E}" 2>/dev/null || true
 
-echo "  -> Microsoft .NET Desktop Runtime 8.0 LTS (x64) indiriliyor ve kuruluyor..."
+echo "  -> Downloading and installing Microsoft .NET Desktop Runtime 8.0 LTS (x64)..."
 DOTNET8_URL="https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/8.0.15/windowsdesktop-runtime-8.0.15-win-x64.exe"
 curl -fL -o "$RT_CACHE/windowsdesktop-runtime-8-x64.exe" "$DOTNET8_URL" \
   && "$WINE" "$RT_CACHE/windowsdesktop-runtime-8-x64.exe" /install /quiet /norestart || true
 
-echo "  -> Microsoft .NET Desktop Runtime 6.0 LTS (x64) indiriliyor ve kuruluyor..."
+echo "  -> Downloading and installing Microsoft .NET Desktop Runtime 6.0 LTS (x64)..."
 DOTNET6_URL="https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/6.0.36/windowsdesktop-runtime-6.0.36-win-x64.exe"
 curl -fL -o "$RT_CACHE/windowsdesktop-runtime-6-x64.exe" "$DOTNET6_URL" \
   && "$WINE" "$RT_CACHE/windowsdesktop-runtime-6-x64.exe" /install /quiet /norestart || true
 
-echo "  -> Klasik .NET Framework 4.8 (dotnet48) kuruluyor (bu adım birkaç dakika sürebilir)..."
+echo "  -> Installing classic .NET Framework 4.8 (dotnet48) (may take a few minutes)..."
 winetricks -q dotnet48 || true
 "$WINE" winecfg -v win10 2>/dev/null || true
 "$WINESERVER" -w || true
-echo "✔ .NET Framework ve .NET Desktop Runtime kurulumları tamamlandı."
+echo "✔ .NET Framework and .NET Desktop Runtime setups done."
 '''
 
 RT_PYTHON_BODY = '''
 echo "════════════════════════════════════════════════════════════"
-echo "▸ Windows için Python 3.12 (64-bit) ve PIP Kuruluyor"
+echo "▸ Installing Python 3.12 for Windows (64-bit) and PIP"
 echo "════════════════════════════════════════════════════════════"
 PY_URL="https://www.python.org/ftp/python/3.12.8/python-3.12.8-amd64.exe"
-echo "  -> Python 3.12.8 (64-bit) indiriliyor..."
+echo "  -> Downloading Python 3.12.8 (64-bit)..."
 curl -fL -o "$RT_CACHE/python-3.12.8-amd64.exe" "$PY_URL"
-echo "  -> Wine önekine sessiz kurulum yapılıyor (PrependPath=1, Include_pip=1)..."
+echo "  -> Silent install into Wine prefix (PrependPath=1, Include_pip=1)..."
 "$WINE" "$RT_CACHE/python-3.12.8-amd64.exe" /quiet InstallAllUsers=1 PrependPath=1 Include_test=0 Include_pip=1 || true
 "$WINESERVER" -w || true
-echo "✔ Windows Python 3.12 kurulumu tamamlandı."
+echo "✔ Windows Python 3.12 setup done."
 '''
 
 RT_JAVA_BODY = '''
 echo "════════════════════════════════════════════════════════════"
-echo "▸ Eclipse Temurin Java JRE 21 LTS (Windows 64-bit) Kuruluyor"
+echo "▸ Installing Eclipse Temurin Java JRE 21 LTS (Windows 64-bit)"
 echo "════════════════════════════════════════════════════════════"
 JAVA_API="https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse?project=jdk"
-echo "  -> Temurin JRE 21 LTS (x64) indiriliyor..."
+echo "  -> Downloading Temurin JRE 21 LTS (x64)..."
 curl -fL -o "$RT_CACHE/temurin-jre21-win64.msi" "https://api.adoptium.net/v3/installer/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse" \
   && "$WINE" msiexec /i "$RT_CACHE/temurin-jre21-win64.msi" INSTALLLEVEL=1 /quiet /norestart || true
 "$WINESERVER" -w || true
-echo "✔ Windows Java JRE 21 LTS kurulumu tamamlandı."
+echo "✔ Windows Java JRE 21 LTS setup done."
 '''
 
 RT_FONTS_DLL_BODY = '''
 echo "════════════════════════════════════════════════════════════"
-echo "▸ Temel Windows Yazı Tipleri (Corefonts) ve Sistem DLL Paketleri Kuruluyor"
+echo "▸ Installing core Windows fonts (Corefonts) and system DLL packages"
 echo "════════════════════════════════════════════════════════════"
 for fpkg in corefonts tahoma gdiplus msxml3 msxml6 winhttp ucrtbase; do
-  echo "  -> $fpkg kuruluyor..."
+  echo "  -> Installing $fpkg..."
   winetricks -q "$fpkg" || true
 done
-echo "  -> msxml3 override builtin yapılıyor (native msxml3 system32'de msxml3r olmadan COM olarak yüklenemiyor)..."
+echo "  -> Setting msxml3 override to builtin (native msxml3 cannot load as COM without msxml3r in system32)..."
 "$WINE" reg add 'HKCU\\Software\\Wine\\DllOverrides' /v '*msxml3' /d 'builtin' /f 2>/dev/null || true
 "$WINE" winecfg -v win11 2>/dev/null || true
 "$WINE" reg add 'HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion' /v CurrentBuildNumber /d 26300 /f 2>/dev/null || true
 "$WINE" reg add 'HKLM\\Software\\Microsoft\\Windows NT\\CurrentVersion' /v DisplayVersion /d 26H2 /f 2>/dev/null || true
 "$WINESERVER" -w || true
-echo "✔ Yazı tipleri ve sistem DLL bileşenleri tamamlandı."
+echo "✔ Fonts and system DLL components done."
 '''
 
 RT_DLLFIX_SCRIPT    = RT_PREP_HEADER + RT_DLLFIX_BODY
@@ -1758,10 +1757,10 @@ RT_ALL_SCRIPT = (
     + RT_PYTHON_BODY
     + RT_JAVA_BODY
     + RT_DOTNET_BODY
-    + '\necho ""\necho "🎉 TÜM WINE GEREKSİNİMLERİ VE DLL ONARIMLARI BAŞARIYLA KURULDU!"\n'
+    + '\necho ""\necho "🎉 ALL WINE RUNTIMES AND DLL REPAIRS INSTALLED SUCCESSFULLY!"\n'
 )
 
-# ------------------------------------------------------------------ Wine derleme betikleri
+# ------------------------------------------------------------------ Wine build scripts
 PATCH_PY = r'''
 import sys
 p = sys.argv[1]
@@ -1769,13 +1768,13 @@ s = open(p, encoding="utf-8", errors="replace").read()
 OLD = %r
 NEW = %r
 if NEW in s:
-    print("   yama zaten uygulanmış."); sys.exit(0)
+    print("   patch already applied."); sys.exit(0)
 n = s.count(OLD)
 if n != 1:
-    print("   !! yama deseni bulunamadı (eşleşme=%%d). Wine sürümü değişmiş olabilir." %% n)
+    print("   !! patch pattern not found (matches=%%d). Wine version may have changed." %% n)
     sys.exit(2)
 open(p, "w", encoding="utf-8").write(s.replace(OLD, NEW))
-print("   yama uygulandı -> dlls/win32u/vulkan.c")
+print("   patch applied -> dlls/win32u/vulkan.c")
 ''' % (PATCH_OLD, PATCH_NEW)
 
 PKG_MAKE = f'''
@@ -1807,11 +1806,11 @@ package() {{
 PKGE
 cd "$WORK/pkg" && PKGEXT='.pkg.tar' makepkg -f --noconfirm \\
   && ${{ROOTCMD[@]}} pacman -U --overwrite='*' --noconfirm ./*.pkg.tar*
-echo "   paket: $(pacman -Q {PKGNAME} 2>/dev/null || echo 'kurulamadı')"
+echo "   package: $(pacman -Q {PKGNAME} 2>/dev/null || echo 'not installed')"
 '''
 
 REGISTER = f'''
-echo "▸ Masaüstü, sembolik bağ ve MIME kaydı"
+echo "▸ Desktop, symlink and MIME registration"
 ${{ROOTCMD[@]}} install -d /usr/bin
 for _t in wine wineserver winecfg wineboot wineconsole winedbg winefile \\
          winepath winemine regedit regsvr32 msiexec msidb notepad \\
@@ -1835,24 +1834,24 @@ fi
 xdg-mime default wine.desktop application/x-ms-dos-executable \\
   application/x-msi application/x-ms-shortcut application/x-bat 2>/dev/null || true
 ${{ROOTCMD[@]}} update-desktop-database /usr/share/applications 2>/dev/null || true
-echo "   .exe varsayılanı -> wine.desktop"
+echo "   default .exe handler -> wine.desktop"
 '''
 
 QUICK_REPAIR_SCRIPT = f'''
 set -uo pipefail
 if sudo -n true 2>/dev/null; then ROOTCMD=(sudo); elif command -v pkexec >/dev/null; then ROOTCMD=(pkexec); else ROOTCMD=(sudo); fi
 {REGISTER}
-echo "Tamamlandı."
+echo "Done."
 '''
 
 BUILD = f'''
 set -uo pipefail
 WORK="{WORK}"; mkdir -p "$WORK"
 if sudo -n true 2>/dev/null; then ROOTCMD=(sudo); elif command -v pkexec >/dev/null; then ROOTCMD=(pkexec); else ROOTCMD=(sudo); fi
-echo "▸ 1/5  Uyumlu mingw başlıkları ve bağımlılıklar"
+echo "▸ 1/5  Compatible mingw headers and dependencies"
 MINGWV=$(pacman -Q mingw-w64-headers 2>/dev/null | cut -d' ' -f2 || true)
 if [ "$MINGWV" != "13.0.0-1" ]; then
-  echo "   mingw-w64 başlıkları 13.0.0'a sabitleniyor"
+  echo "   Pinning mingw-w64 headers to 13.0.0"
   mkdir -p "$WORK/mingw13"
   for _p in mingw-w64-headers mingw-w64-crt mingw-w64-winpthreads; do
     _u="https://archive.archlinux.org/packages/m/$(echo $_p | cut -c1)/$_p/$_p-13.0.0-1-any.pkg.tar.zst"
@@ -1861,9 +1860,9 @@ if [ "$MINGWV" != "13.0.0-1" ]; then
   done
   ${{ROOTCMD[@]}} pacman -U --noconfirm "$WORK/mingw13/"*.pkg.tar.zst
 else
-  echo "   mingw-w64 zaten uyumlu (13.0.0)"
+  echo "   mingw-w64 already compatible (13.0.0)"
 fi
-echo "▸ 1b/5  Derleme, ccache, winetricks ve Vulkan bağımlılıkları"
+echo "▸ 1b/5  Build, ccache, winetricks and Vulkan dependencies"
 ${{ROOTCMD[@]}} pacman -S --needed --noconfirm base-devel mingw-w64-gcc ccache winetricks cabextract unzip p7zip \\
   vulkan-headers vulkan-icd-loader lib32-vulkan-icd-loader gnutls mesa libglvnd \\
   libx11 libxext libxrandr libxinerama libxcursor libxi freetype2 fontconfig \\
@@ -1875,26 +1874,26 @@ export CROSSCC_x86_64="ccache x86_64-w64-mingw32-gcc"
 export CROSSCC_i386="ccache i686-w64-mingw32-gcc"
 ccache -M 10G >/dev/null 2>&1 || true
 
-echo "▸ 2/5  Kaynak indiriliyor"
+echo "▸ 2/5  Downloading sources"
 [[ -s "$WORK/wine-{PKGVER}.tar.xz" ]] || curl -fL -o "$WORK/wine-{PKGVER}.tar.xz" "{WINE_SRC_URL}"
 rm -rf "$WORK/wine-{PKGVER}"; tar -xf "$WORK/wine-{PKGVER}.tar.xz" -C "$WORK"
-echo "▸ 3/5  Yama uygulanıyor"
+echo "▸ 3/5  Applying patch"
 python3 - "$WORK/wine-{PKGVER}/dlls/win32u/vulkan.c" <<'PATCHEOF'
 {PATCH_PY}PATCHEOF
-[[ $? -eq 0 ]] || {{ echo "!! yama uygulanamadı"; exit 1; }}
-echo "▸ 4/5  Derleme ($(nproc) çekirdek + ccache)"
+[[ $? -eq 0 ]] || {{ echo "!! patch failed"; exit 1; }}
+echo "▸ 4/5  Building ($(nproc) cores + ccache)"
 rm -rf "$WORK/build" "$WORK/dest"; mkdir -p "$WORK/build" "$WORK/dest"
 cd "$WORK/build" && "$WORK/wine-{PKGVER}/configure" --prefix={WINE_ROOT} \\
    --enable-archs=x86_64,i386 --disable-tests >/dev/null \\
 && make -j"$(nproc)" >/dev/null \\
-&& make DESTDIR="$WORK/dest" install >/dev/null || {{ echo "!! derleme başarısız"; exit 1; }}
-echo "▸ 5/5  pacman paketi oluşturuluyor ve kuruluyor"
+&& make DESTDIR="$WORK/dest" install >/dev/null || {{ echo "!! build failed"; exit 1; }}
+echo "▸ 5/5  Creating and installing pacman package"
 {PKG_MAKE}
 '''
 
 REPAIR_SCRIPT = BUILD + REGISTER + '''
 echo
-echo "Tamamlandı."
+echo "Done."
 '''
 
 REBUILD_SCRIPT = BUILD + '''
@@ -1903,25 +1902,25 @@ echo "Tamamlandı."
 
 UPDATE_SCRIPT = f'''
 echo "════════════════════════════════════════════════"
-echo "  Güncelleme Denetimi"
+echo "  Update Check"
 echo "════════════════════════════════════════════════"
 echo
-echo "  Kurulu paket : {PKGNAME} {PKGVER}"
-echo "  Kurulu Wine  : $({WINE_BIN} --version 2>/dev/null || echo 'yok')"
-echo "  32-bit modül : $(ls {WINE_ROOT}/lib/wine/i386-windows/*.dll 2>/dev/null | wc -l)"
-echo "  64-bit modül : $(ls {WINE_ROOT}/lib/wine/x86_64-windows/*.dll 2>/dev/null | wc -l)"
+echo "  Installed package : {PKGNAME} {PKGVER}"
+echo "  Installed Wine  : $({WINE_BIN} --version 2>/dev/null || echo 'none')"
+echo "  32-bit modules : $(ls {WINE_ROOT}/lib/wine/i386-windows/*.dll 2>/dev/null | wc -l)"
+echo "  64-bit modules : $(ls {WINE_ROOT}/lib/wine/x86_64-windows/*.dll 2>/dev/null | wc -l)"
 echo
-echo "▸ Upstream (dl.winehq.org) 11.x sürümleri:"
+echo "▸ Upstream (dl.winehq.org) 11.x releases:"
 curl -fsSL "https://dl.winehq.org/wine/source/11.x/" 2>/dev/null \\
   | grep -oE 'wine-[0-9]+\\.[0-9]+(\\.[0-9]+)?\\.tar\\.xz' \\
   | sed 's/\\.tar\\.xz//' | sort -uV | tail -8 | sed 's/^/     /' \\
-  || echo "     (liste alınamadı — internet bağlantısını kontrol edin)"
+  || echo "     (list unavailable - check internet connection)"
 '''
 
 UNINSTALL_SCRIPT = f'''
 set -u
 if sudo -n true 2>/dev/null; then ROOTCMD=(sudo); elif command -v pkexec >/dev/null; then ROOTCMD=(pkexec); else ROOTCMD=(sudo); fi
-echo "▸ Kaldırma başlıyor"
+echo "▸ Uninstall starting"
 ${{ROOTCMD[@]}} pacman -Rdd --noconfirm {PKGNAME} 2>&1 || true
 ${{ROOTCMD[@]}} rm -rf {WINE_ROOT}
 ${{ROOTCMD[@]}} rm -f {WINE_DESKTOP}
@@ -1939,10 +1938,10 @@ rm -f "{PIXMAPS_DIR}"/substance-3d-*.png "{PIXMAPS_DIR}"/adobe-substance-*.png "
 update-desktop-database "{LOCAL_APPS_DIR}" 2>/dev/null || true
 rm -rf "{WORK}"
 echo
-echo "  Kaldırıldı."
+echo "  Removed."
 '''
 
-# ------------------------------------------------------------------ giriş
+# ------------------------------------------------------------------ entrypoint
 def main():
     os.makedirs(WORK, exist_ok=True)
     app = QApplication(sys.argv)

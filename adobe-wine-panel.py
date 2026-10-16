@@ -606,7 +606,7 @@ def audio_backend_ok():
     """
     try:
         r = sh([WINE_BIN, "reg", "query", "HKCU\\Software\\Wine\\Drivers", "/v", "Audio"],
-               env=dict(os.environ, WINEPREFIX=WINE_PREFIX))
+               env=dict(os.environ, WINEPREFIX=WINE_PREFIX), timeout=10)
         out = (getattr(r, "stdout", "") or "").lower()
         if "alsa" in out or "oss" in out or "jack" in out:
             return "winepulse" in out

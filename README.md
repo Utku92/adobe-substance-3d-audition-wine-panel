@@ -31,6 +31,28 @@ Interface languages: **Türkçe / English / Deutsch** (switchable from the heade
 - **Diagnostics**: startup + on-demand scan (Wine core, icons, MIME, prefix, Vulkan, disk, runtimes) with guided fixes
 - **Multilingual UI**: header language switcher (TR/EN/DE), auto-detects system locale on first run
 
+## Screenshots
+
+Running on Arch Linux + patched Wine 11.19:
+
+| Audition | Sampler |
+|---|---|
+| ![Audition on Wine](assets/screenshots/audition.png) | ![Substance 3D Sampler on Wine](assets/screenshots/sampler.png) |
+
+| Designer | Painter |
+|---|---|
+| ![Substance 3D Designer on Wine](assets/screenshots/designer.png) | ![Substance 3D Painter on Wine](assets/screenshots/painter.png) |
+
+## Security / VirusTotal
+
+`adobe-wine-panel.py` is plain-text Python — you can read every line before running it. No binaries, no obfuscation.
+
+- SHA256 (`v3.2`, commit `9f1604d`): `60902734b01cce6f5cc9fd5277b82574e650626f9307d9c5d7b28bff7a21f7fb`
+- VirusTotal analysis: https://www.virustotal.com/gui/file/60902734b01cce6f5cc9fd5277b82574e650626f9307d9c5d7b28bff7a21f7fb
+- Verify locally: `sha256sum adobe-wine-panel.py`
+
+> Note: each new commit changes the hash. If the file above was modified after this README, re-check the hash and re-upload to VirusTotal.
+
 ## Requirements
 
 - Arch Linux (or Arch-based; uses `pacman`, `makepkg`)

@@ -1422,21 +1422,21 @@ class Panel(QWidget):
         issues = [(status, text) for status, text in safe_rows if status != "ok"]
         missing_rt = [escape(name) for name, present in runtime_rows if not present]
         guidance = []
-        for _, text in issues:
+        for status, text in issues:
             low = text.lower()
             if "vulkan" in low:
                 guidance.append(t("g_vulkan"))
-            elif "disk" in low:
+            elif "disk" in low or "space" in low:
                 guidance.append(t("g_disk"))
-            elif "öneki" in low:
+            elif "prefix" in low:
                 guidance.append(t("g_prefix"))
-            elif "ses" in low or "audio" in low:
+            elif "audio" in low:
                 guidance.append(t("g_audio"))
-            elif "gereksinimi" in low or any(rt.lower() in low for rt in missing_rt):
+            elif "runtime" in low or any(rt.lower() in low for rt in missing_rt):
                 guidance.append(t("g_rt"))
             elif status == "bad":
                 guidance.append(t("g_crit"))
-            elif "kısayol" in low or "simge" in low:
+            elif "shortcut" in low or "icon" in low:
                 guidance.append(t("g_short"))
         guidance = list(dict.fromkeys(guidance))
         details = "<br>".join(f"{icons.get(status, '•')} {text}" for status, text in safe_rows)
@@ -1897,7 +1897,7 @@ echo "Done."
 '''
 
 REBUILD_SCRIPT = BUILD + '''
-echo "Tamamlandı."
+echo "Done."
 '''
 
 UPDATE_SCRIPT = f'''

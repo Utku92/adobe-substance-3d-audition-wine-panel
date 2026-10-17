@@ -18,7 +18,12 @@ Interface languages: **Türkçe / English / Deutsch** (switchable from the heade
   - Substance 3D Sampler, Designer, Painter + Audition 2026 launch cards
   - Generates official-style **Pt / Sa / Ds / Au** 256×256 PNG + SVG icons
   - Rebuilds KDE/GNOME start-menu `.desktop` entries, refreshes icon cache
+  - Shortcuts are created **only for apps actually installed** in the prefix; duplicate / wine-generated extra entries are cleaned up
+  - Launch wrapper `adobe-wine-run` stops Adobe/Wine helpers and closes the prefix (`wineserver -k`) when the app exits
 - **Audio fix for Audition**: pins `HKCU\Software\Wine\Drivers\Audio` to `winepulse.drv` (PipeWire/PulseAudio)
+- **Wine cleanup**: `adobe-wine-kill` helper (safe / `--helpers-only` / `--full`) + a cleanup action in the panel; leaves no Adobe/Wine helper processes behind (a common freeze source on NVIDIA + KDE)
+- **KDE/NVIDIA window fixes** (action): per-display *Prefer efficiency* color mode, `AllowTearing` and a 99 % opacity window rule — workarounds for the dark/stale-window bug on KWin 6.8 + NVIDIA (files are backed up; KWin is reconfigured)
+- **Wayland**: ensures `HKCU\Software\Wine\Drivers` → `Graphics=wayland` on Wayland sessions
 - **Runtimes tab (one-click)**:
   - Visual C++ Redistributable 2005–2022 (x86 + x64)
   - Direct msvcp140/vcruntime140 DLL repair via `cabextract` (`vc_redist` → `system32`/`syswow64` + `wineserver -k` + `native,builtin` overrides)
@@ -28,7 +33,7 @@ Interface languages: **Türkçe / English / Deutsch** (switchable from the heade
   - Eclipse Temurin Java JRE 21 LTS (Windows x64, MSI)
   - Corefonts, Tahoma, gdiplus, msxml3/6, winhttp, ucrtbase, webview2 stub
   - Winetricks GUI launcher
-- **Diagnostics**: startup + on-demand scan (Wine core, icons, MIME, prefix, Vulkan, disk, runtimes) with guided fixes
+- **Diagnostics**: startup + on-demand scan (Wine core, icons, MIME, prefix, Vulkan, disk, runtimes, Wayland graphics driver, KDE color mode) with guided fixes
 - **Multilingual UI**: header language switcher (TR/EN/DE), auto-detects system locale on first run
 
 ## Screenshots
@@ -47,11 +52,11 @@ Running on Arch Linux + patched Wine 11.19:
 
 `adobe-wine-panel.py` is plain-text Python — you can read every line before running it. No binaries, no obfuscation.
 
-- SHA256 (`v3.2`, commit `9f1604d`): `60902734b01cce6f5cc9fd5277b82574e650626f9307d9c5d7b28bff7a21f7fb`
-- VirusTotal analysis: https://www.virustotal.com/gui/file/60902734b01cce6f5cc9fd5277b82574e650626f9307d9c5d7b28bff7a21f7fb
+- SHA256 (`v2.0`): `44483cdb6daf4bfebbea6a095f15f61f9ae4aba22180eaa66658d6cfd10e6200`
+- VirusTotal analysis (v1.0 file): https://www.virustotal.com/gui/file/60902734b01cce6f5cc9fd5277b82574e650626f9307d9c5d7b28bff7a21f7fb
 - Verify locally: `sha256sum adobe-wine-panel.py`
 
-> Note: each new commit changes the hash. If the file above was modified after this README, re-check the hash and re-upload to VirusTotal.
+> Note: every commit changes the hash. Re-upload the file to VirusTotal when it changes; download the exact release asset to match a published hash.
 
 ## Requirements
 
@@ -100,6 +105,8 @@ adobe-substance-3d-audition-wine-panel/
 └── .gitignore
 ```
 
+First panel start also generates `~/.local/bin/adobe-wine-run` and `~/.local/bin/adobe-wine-kill` (launcher wrapper + cleanup helper; existing versions are backed up when updated).
+
 Installer:
 
 ```bash
@@ -113,7 +120,10 @@ chmod +x install.sh
 - `msvcp140.dll missing` → **Direct DLL Repair** (tab 1 or Runtimes tab).
 - No audio in Audition → **Audition Audio Backend Repair**, reopen Audition.
 - Black 3D viewport → rebuild Wine (Vulkan patch), check `vulkaninfo`, install Vulkan drivers.
-- Start-menu icons stale → **Repair Icons & Shortcuts**, or `kbuildsycoca6 --noincremental`.
+- Start-menu icons stale or duplicated → **Repair Icons & Shortcuts** (cleans duplicates too), or `kbuildsycoca6 --noincremental`.
+- **Dark, stale or slow-repainting windows (KDE Plasma + NVIDIA)** → run **KDE/NVIDIA Window Fixes**. KWin 6.8.0 has a dark-window bug (fixed upstream in 6.8.1).
+- **App hangs when closing / Wine processes stay behind** → cleanup now happens automatically after launch; you can also run **Wine Cleanup** manually. Safe mode closes the prefix only when no other Wine app is running; otherwise you are asked before a forced `--full` close. Log: `~/.local/share/adobe-wine/cleanup.log`.
+- **Render freeze after alt-tab / re-opening windows (X11/XWayland)** → in System Settings → Display, let legacy X11 apps apply scaling themselves; the KDE fix action also enables `AllowTearing`.
 
 ## Disclaimer
 

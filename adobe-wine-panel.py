@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Adobe Substance 3D + Audition · Wine Panel        (single file · v3.2)
+Adobe Substance 3D + Audition · Wine Panel        (single file · v2.0)
 
 This single file manages the "patched Wine" setup required to run Adobe
 Substance 3D applications on Linux, official Substance 3D (Pt, Sa, Ds) app
@@ -11,7 +11,7 @@ Java, Python, Corefonts) in a tabbed interface.
 
 License: MIT
 """
-import os, sys, re, glob, shutil, subprocess
+import os, sys, re, glob, json, time, uuid, shutil, subprocess
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt6.QtGui import QIcon, QPixmap, QImage, QPainter, QColor, QFont, QPen
@@ -60,7 +60,7 @@ TRANSLATIONS = {
     # genel
     "window_title": {"tr": "Adobe Substance 3D + Audition · Wine Panel", "en": "Adobe Substance 3D + Audition · Wine Panel", "de": "Adobe Substance 3D + Audition · Wine Panel"},
     "header_title": {"tr": "Adobe Substance 3D + Audition", "en": "Adobe Substance 3D + Audition", "de": "Adobe Substance 3D + Audition"},
-    "header_sub": {"tr": "Wine Panel  ·  yamalı Wine, uygulama simgeleri, DLL onarımı ve tüm Windows gereksinimleri  ·  sürüm 3.2", "en": "Wine Panel  ·  patched Wine, app icons, DLL repair and all Windows runtimes  ·  v3.2", "de": "Wine Panel  ·  gepatchtes Wine, App-Icons, DLL-Reparatur und alle Windows-Laufzeiten  ·  v3.2"},
+    "header_sub": {"tr": "Wine Panel  ·  yamalı Wine, uygulama simgeleri, DLL onarımı ve tüm Windows gereksinimleri  ·  sürüm 2.0", "en": "Wine Panel  ·  patched Wine, app icons, DLL repair and all Windows runtimes  ·  v2.0", "de": "Wine Panel  ·  gepatchtes Wine, App-Icons, DLL-Reparatur und alle Windows-Laufzeiten  ·  v2.0"},
     "pill_checking": {"tr": "Sistem kontrol ediliyor…", "en": "Checking system…", "de": "System wird geprüft…"},
     "rtpill_checking": {"tr": "Gereksinimler kontrol ediliyor…", "en": "Checking runtimes…", "de": "Laufzeiten werden geprüft…"},
     "pill_ready": {"tr": "●  Wine Hazır  ·  {ok} kontrol tamam", "en": "●  Wine Ready  ·  {ok} checks passed", "de": "●  Wine bereit  ·  {ok} Prüfungen OK"},
@@ -159,7 +159,7 @@ TRANSLATIONS = {
     "d_notfound_b": {"tr": "Önce Adobe uygulamasını bu Wine önekine kurun.", "en": "Install the Adobe app into this Wine prefix first.", "de": "Installieren Sie zuerst die Adobe-App in dieses Wine-Präfix."},
     "d_notfound_suf": {"tr": "kurulu değil", "en": "is not installed", "de": "ist nicht installiert"},
     "d_started_suf": {"tr": "başlatıldı", "en": "launched", "de": "gestartet"},
-    "d_started_b": {"tr": "Uygulama açılıyor.<br><br>3D görünüm, yamalı Wine sayesinde render edilir.", "en": "Launching app.<br><br>3D view renders thanks to patched Wine.", "de": "App wird gestartet.<br><br>3D-Ansicht rendert dank gepatchtem Wine."},
+    "d_started_b": {"tr": "Uygulama açılıyor.<br>Kapanınca Wine artıkları otomatik temizlenir.", "en": "Launching app.<br>Wine leftovers are cleaned up automatically when it closes.", "de": "App wird gestartet.<br>Wine-Reste werden beim Beenden automatisch bereinigt."},
     "d_error_t": {"tr": "Hata", "en": "Error", "de": "Fehler"},
     "d_audio_done": {"tr": "Audition Ses Onarımı Tamam", "en": "Audition Audio Repair Done", "de": "Audition-Audio-Reparatur fertig"},
     "d_audio_check": {"tr": "Audition Ses Onarımı (Kontrol Et)", "en": "Audition Audio Repair (Check)", "de": "Audition-Audio-Reparatur (prüfen)"},
@@ -197,7 +197,7 @@ TRANSLATIONS = {
     "d_uninstall_word": {"tr": "SİL", "en": "DELETE", "de": "LÖSCHEN"},
     "d_uninstall_b": {"tr": "Bu işlem <b>geri alınamaz</b>.<br><br>• <b>wine-patched</b> paketi silinir<br>• <b>/opt/wine-patched</b> dizini silinir<br>• masaüstü, simge ve MIME kayıtları temizlenir<br><br><b>Adobe uygulamaları silinmez</b>, ama Wine olmadan açılmazlar.", "en": "This cannot be <b>undone</b>.<br><br>• <b>wine-patched</b> package removed<br>• <b>/opt/wine-patched</b> deleted<br>• desktop, icon and MIME entries cleaned<br><br><b>Adobe apps are kept</b>, but won't launch without Wine.", "de": "Dies kann <b>nicht rückgängig</b> gemacht werden.<br><br>• <b>wine-patched</b>-Paket entfernt<br>• <b>/opt/wine-patched</b> gelöscht<br>• Desktop-, Icon- und MIME-Einträge bereinigt<br><br><b>Adobe-Apps bleiben</b>, starten aber ohne Wine nicht."},
     "d_uninstall_confirm": {"tr": "Onaylamak için <b>{w}</b> yazın:", "en": "Type <b>{w}</b> to confirm:", "de": "Zum Bestätigen <b>{w}</b> eingeben:"},
-    "d_about_b": {"tr": "<b>Sürüm 3.2</b> · MIT · 3 dil (TR/EN/DE)<br><br>Bu panel, Adobe Substance 3D + Audition uygulamalarını Linux'ta çalıştırmak için gerekli <b>özel derlenmiş Wine</b> kurulumunu, resmi <b>Pt / Sa / Ds</b> uygulama simgelerini, <b>msvcp140 doğrudan DLL onarımını</b> ve <b>VCRedist, .NET, DirectX/DXVK, Java, Python</b> gereksinimlerini yönetir.", "en": "<b>v3.2</b> · MIT · 3 languages (TR/EN/DE)<br><br>This panel manages the <b>custom Wine build</b> needed to run Adobe Substance 3D + Audition on Linux, official <b>Pt / Sa / Ds</b> icons, <b>direct msvcp140 DLL repair</b> and <b>VCRedist, .NET, DirectX/DXVK, Java, Python</b> runtimes.", "de": "<b>v3.2</b> · MIT · 3 Sprachen (TR/EN/DE)<br><br>Dieses Panel verwaltet den <b>angepassten Wine-Build</b> für Adobe Substance 3D + Audition unter Linux, offizielle <b>Pt-/Sa-/Ds</b>-Icons, <b>direkte msvcp140-DLL-Reparatur</b> und <b>VCRedist-, .NET-, DirectX/DXVK-, Java-, Python</b>-Laufzeiten."},
+    "d_about_b": {"tr": "<b>Sürüm 2.0</b> · MIT · 3 dil (TR/EN/DE)<br><br>Bu panel, Adobe Substance 3D + Audition uygulamalarını Linux'ta çalıştırmak için gerekli <b>özel derlenmiş Wine</b> kurulumunu, resmi <b>Pt / Sa / Ds</b> uygulama simgelerini, <b>msvcp140 doğrudan DLL onarımını</b> ve <b>VCRedist, .NET, DirectX/DXVK, Java, Python</b> gereksinimlerini yönetir.", "en": "<b>v2.0</b> · MIT · 3 languages (TR/EN/DE)<br><br>This panel manages the <b>custom Wine build</b> needed to run Adobe Substance 3D + Audition on Linux, official <b>Pt / Sa / Ds</b> icons, <b>direct msvcp140 DLL repair</b> and <b>VCRedist, .NET, DirectX/DXVK, Java, Python</b> runtimes.", "de": "<b>v2.0</b> · MIT · 3 Sprachen (TR/EN/DE)<br><br>Dieses Panel verwaltet den <b>angepassten Wine-Build</b> für Adobe Substance 3D + Audition unter Linux, offizielle <b>Pt-/Sa-/Ds</b>-Icons, <b>direkte msvcp140-DLL-Reparatur</b> und <b>VCRedist-, .NET-, DirectX/DXVK-, Java-, Python</b>-Laufzeiten."},
     "d_startup_t": {"tr": "Wine kurulumu eksik veya bozulmuş görünüyor", "en": "Wine install looks missing or broken", "de": "Wine-Installation scheint zu fehlen oder defekt"},
     "d_startup_b": {"tr": "Bir güncelleme ya da eksik kurulum buna sebep olmuş olabilir.<br><br>Şimdi kontrol edilip onarılsın mı?", "en": "An update or incomplete install may have caused this.<br><br>Check and repair now?", "de": "Ein Update oder eine unvollständige Installation kann die Ursache sein.<br><br>Jetzt prüfen und reparieren?"},
     "d_startup_n": {"tr": "<b>{bad} kritik madde</b> eksik.", "en": "<b>{bad} critical items</b> missing.", "de": "<b>{bad} kritische Einträge</b> fehlen."},
@@ -217,6 +217,24 @@ TRANSLATIONS = {
     "t_updates": {"tr": "Güncelleme Denetimi", "en": "Update Check", "de": "Update-Prüfung"},
     "t_rebuild": {"tr": "Yeniden Derleme", "en": "Rebuild", "de": "Neuaufbau"},
     "t_remove": {"tr": "Kaldırma", "en": "Uninstall", "de": "Deinstallation"},
+    # v2.0: cleanup + KDE/NVIDIA fixes
+    "c_cleanup_t": {"tr": "Wine Temizliği", "en": "Wine Cleanup", "de": "Wine-Bereinigung"},
+    "c_cleanup_s": {"tr": "Takılan/kalan Wine süreçlerini temizle", "en": "Clean up stuck Wine processes", "de": "Hängende Wine-Prozesse bereinigen"},
+    "c_cleanup_d": {"tr": "Adobe/Wine yardımcı süreçlerini kapatır; başka Wine uygulaması açık değilse öneki tamamen kapatır (wineserver -k). Çıkışta takılan uygulamaların artıklarını giderir.", "en": "Stops Adobe/Wine helper processes and closes the prefix with wineserver -k when no other Wine app is running. Clears leftovers of apps that hang on exit.", "de": "Beendet Adobe-/Wine-Hilfsprozesse und schließt das Präfix per wineserver -k, wenn keine andere Wine-App läuft. Entfernt Reste von Apps, die beim Beenden hängen."},
+    "c_kdefix_t": {"tr": "KDE/NVIDIA Pencere Düzeltmeleri", "en": "KDE/NVIDIA Window Fixes", "de": "KDE-/NVIDIA-Fensterkorrekturen"},
+    "c_kdefix_s": {"tr": "Kararan/geç çizilen pencereler için bilinen çözümler", "en": "Known workarounds for dark/stale windows", "de": "Bekannte Korrekturen für dunkle/träge Fenster"},
+    "c_kdefix_d": {"tr": "KDE Plasma + NVIDIA'da kararan pencereler için: her ekranda 'Verimliliği yeğle' renk modu, KWin yırtılma izni ve %99 opaklık kuralı (KWin 6.8 hata geçici çözümü). Yedek alınır; KWin yeniden yapılandırılır.", "en": "For dark/stale windows on KDE Plasma + NVIDIA: per-display 'Prefer efficiency' color mode, KWin tearing allowance and a 99% opacity rule (KWin 6.8 bug workaround). Files are backed up; KWin is reconfigured.", "de": "Für dunkle/träge Fenster unter KDE Plasma + NVIDIA: 'Effizienz bevorzugen'-Farbmodus je Anzeige, KWin-Tearing-Erlaubnis und 99%-Deckkraft-Regel (KWin-6.8-Workaround). Dateien werden gesichert; KWin wird neu konfiguriert."},
+    "t_cleanup": {"tr": "Wine Temizliği", "en": "Wine Cleanup", "de": "Wine-Bereinigung"},
+    "d_cleanup_force_t": {"tr": "Diğer Wine uygulamaları açık", "en": "Other Wine apps are running", "de": "Andere Wine-Apps laufen"},
+    "d_cleanup_force_q": {"tr": "Başka bir Wine uygulaması açık olduğu için önek kapatılmadı.<br>Yine de TÜM Wine uygulamaları zorla kapatılsın mı? (--full)", "en": "The prefix was not closed because another Wine app is running.<br>Force-close ALL Wine apps anyway? (--full)", "de": "Das Präfix wurde nicht geschlossen, da eine andere Wine-App läuft.<br>Alle Wine-Apps trotzdem zwangsweise schließen? (--full)"},
+    "d_kdefix_t": {"tr": "KDE/NVIDIA Pencere Düzeltmeleri", "en": "KDE/NVIDIA Window Fixes", "de": "KDE-/NVIDIA-Fensterkorrekturen"},
+    "d_kdefix_q": {"tr": "Şunlar uygulanacak:<br>• Her ekranda renk modu → <b>Verimliliği yeğle</b><br>• KWin yırtılma izni (tam ekran)<br>• %99 opaklık kuralı (KWin 6.8 karanlık-buton hatası geçici çözümü)<br><br>Mevcut dosyaların yedeği alınır ve KWin yeniden yapılandırılır. Devam edilsin mi?", "en": "These will be applied:<br>• Color mode per display → <b>Prefer efficiency</b><br>• KWin tearing allowance (fullscreen)<br>• 99% opacity window rule (KWin 6.8 dark-button bug workaround)<br><br>Existing files are backed up and KWin is reconfigured. Continue?", "de": "Folgendes wird angewendet:<br>• Farbmodus je Anzeige → <b>Effizienz bevorzugen</b><br>• KWin-Tearing-Erlaubnis (Vollbild)<br>• 99%-Deckkraft-Regel (KWin-6.8-Workaround)<br><br>Vorhandene Dateien werden gesichert und KWin wird neu konfiguriert. Fortfahren?"},
+    "d_kdefix_done": {"tr": "Düzeltmeler uygulandı:", "en": "Fixes applied:", "de": "Korrekturen angewendet:"},
+    "d_kdefix_nokde_t": {"tr": "KDE Plasma bulunamadı", "en": "KDE Plasma not detected", "de": "KDE Plasma nicht gefunden"},
+    "d_kdefix_nokde_b": {"tr": "Bu düzeltmeler KDE Plasma'ya özeldir ve mevcut masaüstüne uygulanmadı.", "en": "These fixes target KDE Plasma and were not applied to the current desktop.", "de": "Diese Korrekturen sind für KDE Plasma gedacht und wurden auf dem aktuellen Desktop nicht angewendet."},
+    "d_kdefix_err": {"tr": "Düzeltmeler uygulanırken hata:", "en": "Error while applying fixes:", "de": "Fehler beim Anwenden der Korrekturen:"},
+    "g_kde": {"tr": "KDE/NVIDIA'da kararan pencereler için paneldeki 'KDE/NVIDIA Pencere Düzeltmeleri' eylemini çalıştırın.", "en": "For dark windows on KDE/NVIDIA, run the 'KDE/NVIDIA Window Fixes' action in the panel.", "de": "Bei dunklen Fenstern unter KDE/NVIDIA die Aktion 'KDE-/NVIDIA-Fensterkorrekturen' im Panel ausführen."},
+    "g_wayland": {"tr": "Wayland oturumunda Wine'un 'wayland' grafik sürücüsünü kullanması gerekir; Sistemi Denetle/Onar bunu ayarlar.", "en": "On Wayland sessions Wine must use the 'wayland' graphics driver; Check/Repair System sets this.", "de": "Unter Wayland muss Wine den 'wayland'-Grafiktreiber verwenden; System prüfen/reparieren richtet das ein."},
 }
 
 def t(key, **kw):
@@ -246,6 +264,13 @@ ICON_PNG_DIR   = os.path.expanduser("~/.local/share/icons/hicolor/256x256/apps")
 ICON_SVG_DIR   = os.path.expanduser("~/.local/share/icons/hicolor/scalable/apps")
 PIXMAPS_DIR    = os.path.expanduser("~/.local/share/pixmaps")
 PANEL_DESKTOP  = os.path.join(LOCAL_APPS_DIR, "adobe-wine-panel.desktop")
+LOCAL_BIN_DIR  = os.path.expanduser("~/.local/bin")
+WINE_RUN       = os.path.join(LOCAL_BIN_DIR, "adobe-wine-run")
+WINE_KILL      = os.path.join(LOCAL_BIN_DIR, "adobe-wine-kill")
+CLEANUP_LOG    = os.path.expanduser("~/.local/share/adobe-wine/cleanup.log")
+KWIN_RC        = os.path.expanduser("~/.config/kwinrc")
+KWINRULES_RC   = os.path.expanduser("~/.config/kwinrulesrc")
+KWIN_OUTPUT_CFG = os.path.expanduser("~/.config/kwinoutputconfig.json")
 
 MSVCP140_DLLS = (
     "msvcp140",
@@ -322,6 +347,402 @@ def cleanup_leftover_shm():
             shutil.rmtree(p, ignore_errors=True)
         except Exception:
             pass
+
+def app_exe_path(folder, exe_name):
+    """Absolute path of an app's .exe inside the Wine prefix, or None if missing."""
+    p = f"{WINE_PREFIX}/drive_c/Program Files/Adobe/{folder}/{exe_name}.exe"
+    return p if os.path.isfile(p) else None
+
+def app_match_specs():
+    """(folder, display name, exe name) tuples used for menu-entry matching."""
+    return [(a[0], a[1], app_exe_name(a)) for a in APPS]
+
+def installed_apps():
+    """APPS entries whose .exe exists in the current prefix."""
+    return [a for a in APPS if app_exe_path(a[0], app_exe_name(a))]
+
+# ------------------------------------------------------------------ wayland graphics driver
+def wayland_session():
+    return (os.environ.get("XDG_SESSION_TYPE", "").lower() == "wayland"
+            or bool(os.environ.get("WAYLAND_DISPLAY")))
+
+def wine_graphics_driver():
+    """Current Wine 'Graphics' driver value (or None)."""
+    try:
+        r = sh([WINE_BIN, "reg", "query", "HKCU\\Software\\Wine\\Drivers", "/v", "Graphics"],
+               env=dict(os.environ, WINEPREFIX=WINE_PREFIX), timeout=10)
+        m = re.search(r"Graphics\s+REG_SZ\s+(\S+)", getattr(r, "stdout", "") or "")
+        return m.group(1) if m else None
+    except Exception:
+        return None
+
+def ensure_wine_graphics_driver():
+    """Wayland sessions: Wine must use the wayland driver (best path for Adobe apps)."""
+    if not wayland_session():
+        return False
+    if wine_graphics_driver() == "wayland":
+        return False
+    sh([WINE_BIN, "reg", "add", "HKCU\\Software\\Wine\\Drivers", "/v", "Graphics",
+        "/d", "wayland", "/f"],
+       env=dict(os.environ, WINEPREFIX=WINE_PREFIX), timeout=15)
+    return True
+
+# ------------------------------------------------------------------ launcher / cleanup helpers
+WINE_KILL_SH_TMPL = r"""#!/usr/bin/env bash
+# adobe-wine-kill - clean up Adobe/Wine background processes; close the prefix when safe.
+#
+# Usage:
+#   adobe-wine-kill                -> stop helpers; "wineserver -k" if no other main app runs
+#   adobe-wine-kill --helpers-only -> only stop Adobe/Wine helper processes
+#   adobe-wine-kill --full         -> helpers + unconditional "wineserver -k"
+#   adobe-wine-kill --quiet        -> less output (used by the launcher wrapper)
+# Exit codes: 0 done, 2 skipped (another Wine app), 3 no wineserver.
+set -u
+
+export WINEPREFIX="${WINEPREFIX:-@@WINE_PREFIX@@}"
+WINESERVER="@@WINESERVER@@"
+LOGDIR="${HOME}/.local/share/adobe-wine"
+LOG="${LOGDIR}/cleanup.log"
+
+MODE="auto"; QUIET=0
+for a in "$@"; do
+  case "$a" in
+    --full) MODE="full" ;;
+    --helpers-only) MODE="helpers" ;;
+    --quiet|-q) QUIET=1 ;;
+  esac
+done
+SILENT="${ADOBE_WINE_KILL_SILENT:-0}"
+
+log() {
+  mkdir -p "$LOGDIR"
+  printf '%s %s\n' "$(date '+%F %T')" "$*" >>"$LOG"
+  [ "$QUIET" = 1 ] || printf '%s\n' "$*"
+}
+
+notify() {
+  [ "$SILENT" = 1 ] && return 0
+  command -v notify-send >/dev/null 2>&1 && notify-send -a "Wine cleanup" "$1" "$2" >/dev/null 2>&1
+  return 0
+}
+
+HELPERS=(
+  'crashpad_handler\.exe'
+  'AdobeIPCBroker'
+  'AdobeGCClient'
+  'Adobe Crash Processor'
+  'AdobeCrashReportWindow'
+  'Adobe Desktop Service'
+  'CCXProcess'
+  'armsvc\.exe'
+  'AdobeARM\.exe'
+  'WerFault\.exe'
+  'winedbg\.exe'
+)
+
+INFRA='services\.exe|winedevice\.exe|svchost\.exe|plugplay\.exe|rpcss\.exe|lsass\.exe|conhost\.exe|wineboot\.exe|winemenubuilder|explorer\.exe|tabtip\.exe|start\.exe|wineserver'
+
+kill_helpers() {
+  local p found=0
+  for p in "${HELPERS[@]}"; do
+    if pgrep -f "$p" >/dev/null 2>&1; then
+      pkill -TERM -f "$p" 2>/dev/null && found=1
+    fi
+  done
+  if [ "$found" = 1 ]; then
+    log "Sent polite TERM to Adobe/Wine helper processes."
+    sleep 2
+  fi
+  for p in "${HELPERS[@]}"; do
+    pgrep -f "$p" >/dev/null 2>&1 && pkill -KILL -f "$p" 2>/dev/null
+  done
+  return 0
+}
+
+other_apps_running() {
+  ps -eo args= 2>/dev/null \
+    | grep -Ei '\.exe' \
+    | grep -Evi "$INFRA" \
+    | grep -Evi 'crashpad_handler\.exe|AdobeIPCBroker|AdobeGCClient|Adobe Crash Processor|AdobeCrashReportWindow|Adobe Desktop Service|CCXProcess|armsvc\.exe|AdobeARM\.exe|WerFault\.exe|winedbg\.exe' \
+    | grep -vi 'grep' \
+    | head -1
+}
+
+full_close() {
+  if "$WINESERVER" -k >/dev/null 2>&1; then
+    log "wineserver -k: prefix closed ($WINEPREFIX)."
+  else
+    log "wineserver -k: no running wineserver (already closed)."
+  fi
+}
+
+kill_helpers
+
+case "$MODE" in
+  helpers)
+    log "Mode: helpers only."
+    ;;
+  full)
+    full_close
+    ;;
+  *)
+    other="$(other_apps_running)"
+    if [ -n "$other" ]; then
+      other="${other:0:120}"
+      log "Another Wine app is running: $other - prefix NOT closed."
+      notify "Cleanup skipped" "Another Wine app is running, so the prefix was not closed."
+      exit 2
+    else
+      full_close
+    fi
+    ;;
+esac
+exit 0
+"""
+
+WINE_RUN_SH_TMPL = r"""#!/usr/bin/env bash
+# adobe-wine-run - launch an Adobe app with patched Wine; clean up when it exits.
+# Usage: adobe-wine-run "App Name" "C:\path\to\App.exe" [args...]
+set -u
+WIN_EXE="${2:-}"
+if [ -z "$WIN_EXE" ]; then
+  echo "usage: adobe-wine-run <name> <windows-exe> [args...]" >&2
+  exit 64
+fi
+shift 2
+
+export WINEPREFIX="${WINEPREFIX:-@@WINE_PREFIX@@}"
+KILL="@@WINE_KILL@@"
+
+on_exit() {
+  sleep 2
+  ADOBE_WINE_KILL_SILENT=1 "$KILL" --quiet
+}
+trap on_exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM HUP
+
+"@@WINE_BIN@@" "$WIN_EXE" "$@"
+"""
+
+def _write_helper(path, content):
+    """Write a helper script; keep one timestamped backup when the content changes."""
+    try:
+        old = open(path, encoding="utf-8").read()
+    except Exception:
+        old = None
+    if old == content:
+        try:
+            os.chmod(path, 0o755)
+        except Exception:
+            pass
+        return False
+    if old is not None:
+        try:
+            shutil.copy2(path, path + time.strftime(".bak-%Y%m%d-%H%M%S"))
+        except Exception:
+            pass
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    os.chmod(path, 0o755)
+    return True
+
+def write_wine_helpers():
+    """(Re)create ~/.local/bin/adobe-wine-kill and adobe-wine-run."""
+    logs = []
+    os.makedirs(LOCAL_BIN_DIR, exist_ok=True)
+    kill_sh = (WINE_KILL_SH_TMPL.replace("@@WINE_PREFIX@@", WINE_PREFIX)
+                                .replace("@@WINESERVER@@", WINESERVER))
+    run_sh = (WINE_RUN_SH_TMPL.replace("@@WINE_PREFIX@@", WINE_PREFIX)
+                              .replace("@@WINE_BIN@@", WINE_BIN)
+                              .replace("@@WINE_KILL@@", WINE_KILL))
+    for path, content in ((WINE_KILL, kill_sh), (WINE_RUN, run_sh)):
+        try:
+            if _write_helper(path, content):
+                logs.append(f"✔ Helper updated: {path}")
+        except Exception as e:
+            logs.append(f"! Could not write {path}: {e}")
+    return logs
+
+# ------------------------------------------------------------------ KDE / NVIDIA display fixes
+KWIN_RULE_DESC = "Wine dark-window workaround (99% opacity)"
+
+def kde_session():
+    cur = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
+    return "kde" in cur or "plasma" in cur
+
+def _backup_file(path):
+    if not os.path.isfile(path):
+        return None
+    bak = path + time.strftime(".bak-%Y%m%d-%H%M%S")
+    try:
+        shutil.copy2(path, bak)
+        return bak
+    except Exception:
+        return None
+
+def _read_text(path):
+    try:
+        return open(path, encoding="utf-8", errors="replace").read()
+    except Exception:
+        return ""
+
+def _ini_groups(path):
+    """Minimal KDE-config INI parser: {group: {key: value}}."""
+    groups, cur = {}, None
+    for ln in _read_text(path).splitlines():
+        if ln.startswith("[") and ln.endswith("]"):
+            cur = ln[1:-1]
+            groups.setdefault(cur, {})
+        elif cur is not None and "=" in ln and not ln.startswith("#"):
+            k, v = ln.split("=", 1)
+            groups[cur][k.strip()] = v.strip()
+    return groups
+
+def kwin_prefer_efficiency_status():
+    """(checked, ok): are all outputs set to colorPowerTradeoff=PreferEfficiency?"""
+    if not os.path.isfile(KWIN_OUTPUT_CFG):
+        return False, False
+    try:
+        data = json.load(open(KWIN_OUTPUT_CFG, encoding="utf-8"))
+    except Exception:
+        return False, False
+    vals = []
+
+    def rec(o):
+        if isinstance(o, dict):
+            for k, v in o.items():
+                if k == "colorPowerTradeoff" and isinstance(v, str):
+                    vals.append(v)
+                else:
+                    rec(v)
+        elif isinstance(o, list):
+            for it in o:
+                rec(it)
+
+    rec(data)
+    if not vals:
+        return False, False
+    return True, all(v == "PreferEfficiency" for v in vals)
+
+def kwin_opacity_rule_state():
+    """(present, ok): is a 99% forced-opacity window rule already configured?"""
+    for gid, kv in _ini_groups(KWINRULES_RC).items():
+        if gid == "General":
+            continue
+        if (kv.get("opacityactive") == "99" and kv.get("opacityactiverule") == "2"
+                and kv.get("opacityinactive") == "99" and kv.get("opacityinactiverule") == "2"):
+            return True, True
+    return False, False
+
+def _ini_write_rule(text, group, pairs):
+    """Append a [group] rule to KDE-ini text and register it in [General] Order."""
+    if not text.endswith("\n"):
+        text += "\n"
+    text += f"\n[{group}]\n"
+    for k, v in pairs:
+        text += f"{k}={v}\n"
+    lines = text.splitlines()
+    order_idx = gen_idx = None
+    for i, ln in enumerate(lines):
+        if ln.startswith("[") and ln.endswith("]"):
+            gen_idx = i if ln == "[General]" else None
+        elif gen_idx is not None and ln.startswith("Order="):
+            order_idx = i
+            break
+    if order_idx is not None:
+        ids = [x for x in lines[order_idx][len("Order="):].split(",") if x]
+        if group not in ids:
+            ids.append(group)
+            lines[order_idx] = "Order=" + ",".join(ids)
+        return "\n".join(lines) + "\n"
+    if gen_idx is not None:
+        lines.insert(gen_idx + 1, f"Order={group}")
+    else:
+        lines += ["", "[General]", f"Order={group}"]
+    return "\n".join(lines) + "\n"
+
+def apply_kde_fixes():
+    """KWin/NVIDIA workarounds for dark or stale Wine windows. Returns log lines or None."""
+    if not kde_session():
+        return None
+    logs = []
+
+    # 1) Prefer efficiency color mode (main dark-window fix on NVIDIA + KWin 6.8)
+    if os.path.isfile(KWIN_OUTPUT_CFG):
+        try:
+            data = json.load(open(KWIN_OUTPUT_CFG, encoding="utf-8"))
+            changed = 0
+
+            def rec(o):
+                nonlocal changed
+                if isinstance(o, dict):
+                    if isinstance(o.get("connectorName"), str) and isinstance(o.get("uuid"), str):
+                        if o.get("colorPowerTradeoff") != "PreferEfficiency":
+                            o["colorPowerTradeoff"] = "PreferEfficiency"
+                            changed += 1
+                    for v in o.values():
+                        rec(v)
+                elif isinstance(o, list):
+                    for it in o:
+                        rec(it)
+
+            rec(data)
+            if changed:
+                bak = _backup_file(KWIN_OUTPUT_CFG)
+                with open(KWIN_OUTPUT_CFG, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=4)
+                    f.write("\n")
+                logs.append(f"✔ Color mode set to 'Prefer efficiency' for {changed} display(s)"
+                            + (f" (backup: {bak})" if bak else ""))
+            else:
+                logs.append("• Color mode already 'Prefer efficiency' for all displays.")
+        except Exception as e:
+            logs.append(f"! Could not update kwinoutputconfig.json: {e}")
+    else:
+        logs.append("! kwinoutputconfig.json not found - set 'Prefer efficiency' manually in System Settings.")
+
+    # 2) Allow tearing (helps fullscreen compositor stalls)
+    if have("kwriteconfig6"):
+        sh(["kwriteconfig6", "--file", KWIN_RC, "--group", "Compositing", "--key", "AllowTearing", "true"])
+        logs.append("✔ KWin: AllowTearing=true")
+    else:
+        logs.append("! kwriteconfig6 not found - skipped kwinrc edit.")
+
+    # 3) 99% opacity window rule (KWin 6.8 dark-button bug workaround)
+    present, okvals = kwin_opacity_rule_state()
+    if present and okvals:
+        logs.append("• 99% opacity window rule already present.")
+    else:
+        try:
+            bak = _backup_file(KWINRULES_RC)
+            rid = str(uuid.uuid4())
+            text = _read_text(KWINRULES_RC)
+            text = _ini_write_rule(text, rid, [
+                ("Description", KWIN_RULE_DESC),
+                ("opacityactive", "99"),
+                ("opacityactiverule", "2"),
+                ("opacityinactive", "99"),
+                ("opacityinactiverule", "2"),
+            ])
+            with open(KWINRULES_RC, "w", encoding="utf-8") as f:
+                f.write(text)
+            logs.append("✔ 99% opacity window rule added" + (f" (backup: {bak})" if bak else ""))
+        except Exception as e:
+            logs.append(f"! Could not update kwinrulesrc: {e}")
+
+    # 4) Let KWin pick the changes up without a restart
+    done = False
+    for q in ("qdbus6", "qdbus"):
+        if have(q):
+            r = sh([q, "org.kde.KWin", "/KWin", "reconfigure"])
+            if getattr(r, "returncode", 1) == 0:
+                done = True
+                break
+    logs.append("✔ KWin reconfigured." if done else
+                "! KWin could not be reconfigured - log out and back in to apply.")
+    return logs
 
 GUARD_PKGS = ["wine-patched", "mingw-w64-headers", "mingw-w64-crt", "mingw-w64-winpthreads"]
 
@@ -410,10 +831,12 @@ def resolve_app_icon(icon_names):
     return "wine"
 
 def shortcuts_and_icons_ok():
+    """Every *installed* app needs a valid shortcut + icon set; not-installed
+    apps are skipped (and must not have stale entries)."""
     if not os.path.isfile(PANEL_DESKTOP):
         return False
-    for app in APPS:
-        folder, _, _, _, icon_names, _ = app[:6]
+    for app in installed_apps():
+        folder, nm, _, _, icon_names, _ = app[:6]
         dfile = os.path.join(WINE_PROGS_DIR, f"{folder}.desktop")
         if not os.path.isfile(dfile):
             return False
@@ -423,7 +846,9 @@ def shortcuts_and_icons_ok():
                 return False
         try:
             content = open(dfile, encoding="utf-8", errors="replace").read()
-            if WINE_BIN not in content:
+            if os.path.basename(WINE_RUN) not in content:
+                return False
+            if f"X-Adobe-Wine-Panel={folder}" not in content:
                 return False
             m = re.search(r"^Icon=(.+)$", content, re.MULTILINE)
             if not m:
@@ -437,7 +862,7 @@ def shortcuts_and_icons_ok():
 
 def fix_shortcuts_and_icons():
     logs = []
-    for d in (WINE_PROGS_DIR, LOCAL_APPS_DIR, ICON_PNG_DIR, ICON_SVG_DIR, PIXMAPS_DIR, WORK):
+    for d in (WINE_PROGS_DIR, LOCAL_APPS_DIR, ICON_PNG_DIR, ICON_SVG_DIR, PIXMAPS_DIR, WORK, LOCAL_BIN_DIR):
         os.makedirs(d, exist_ok=True)
 
     for pat in ("adobe-substance-*-[0-9]*.png", "adobe-wine-panel-[0-9]*.png"):
@@ -458,6 +883,8 @@ def fix_shortcuts_and_icons():
         os.chmod(script_path, 0o755)
     except Exception:
         pass
+
+    logs += write_wine_helpers()
 
     _pan_tr = "Adobe Substance 3D Wine Yöneticisi"
     _pan_en = "Adobe Substance 3D Wine Manager"
@@ -493,6 +920,7 @@ Keywords=Adobe;Substance;Wine;Painter;Designer;Sampler;Audition;3D;
         folder, nm, sub, _, icon_names, badge_txt = app[:6]
         exe_name = app_exe_name(app)
         app_dir = f"{WINE_PREFIX}/drive_c/Program Files/Adobe/{folder}"
+        installed = os.path.isfile(f"{app_dir}/{exe_name}.exe")
         if badge_txt == "Au":
             bg_hex, fg_hex = "#1e1b4b", "#22d3ee"
             cats, kw = "Audio;AudioVideo;", f"Adobe;Audition;{nm};Ses;Audio;"
@@ -511,13 +939,26 @@ Keywords=Adobe;Substance;Wine;Painter;Designer;Sampler;Audition;3D;
             shutil.copyfile(primary_png, os.path.join(PIXMAPS_DIR, f"{name}.png"))
             _write_svg_icon(os.path.join(ICON_SVG_DIR, f"{name}.svg"), badge_txt, bg_hex=bg_hex, fg_hex=fg_hex)
 
+        dfile = os.path.join(WINE_PROGS_DIR, f"{folder}.desktop")
+        if not installed:
+            # Never create shortcuts for apps that are not installed in this prefix.
+            # Drop a stale entry from an older run so the menu stays clean.
+            if os.path.isfile(dfile):
+                try:
+                    os.remove(dfile)
+                    logs.append(f"• Removed stale shortcut (app not installed): {nm}")
+                except Exception:
+                    pass
+            continue
+
         wm_class = f"{exe_name.lower()}.exe"
+        win_exe = f"C:\\\\Program Files\\\\Adobe\\\\{folder}\\\\{exe_name}.exe"
         desk_txt = f"""[Desktop Entry]
 Type=Application
 Name={nm}
 GenericName={sub}
 Comment={sub}
-Exec=env "WINEPREFIX={WINE_PREFIX}" {WINE_BIN} "C:\\\\Program Files\\\\Adobe\\\\{folder}\\\\{exe_name}.exe"
+Exec="{WINE_RUN}" "{nm}" "{win_exe}"
 Path={app_dir}
 Icon={primary_png}
 Terminal=false
@@ -525,36 +966,40 @@ StartupNotify=true
 StartupWMClass={wm_class}
 Categories={cats}
 Keywords={kw}
+X-Adobe-Wine-Panel={folder}
 """
-        dfile = os.path.join(WINE_PROGS_DIR, f"{folder}.desktop")
         with open(dfile, "w", encoding="utf-8") as f:
             f.write(desk_txt)
         os.chmod(dfile, 0o755)
-        app_desktop_contents[(folder, nm)] = (dfile, desk_txt)
-        logs.append(f"✔ {nm} ({badge_txt}): {primary_png} ({os.path.getsize(primary_png)} bayt)")
+        app_desktop_contents[folder] = (os.path.abspath(dfile), nm, exe_name)
+        logs.append(f"✔ {nm} ({badge_txt}): {primary_png} ({os.path.getsize(primary_png)} bytes)")
 
-    for root, _, files in os.walk(LOCAL_APPS_DIR):
+    # Remove duplicate / wine-generated extra entries for the same apps so the
+    # start menu shows exactly one shortcut per app.
+    canonical_paths = {c[0] for c in app_desktop_contents.values()}
+    for root, _, files in os.walk(WINE_PROGS_DIR):
         for fn in files:
             if not fn.endswith(".desktop"):
                 continue
             full_p = os.path.abspath(os.path.join(root, fn))
-            if full_p == os.path.abspath(PANEL_DESKTOP):
+            if full_p in canonical_paths:
                 continue
             try:
                 txt = open(full_p, encoding="utf-8", errors="replace").read()
             except Exception:
                 continue
-            for (folder, nm), (canonical_path, new_desk_txt) in app_desktop_contents.items():
-                if os.path.abspath(canonical_path) == full_p:
-                    continue
-                if folder in txt or nm in txt or fn == f"{folder}.desktop":
+            base = fn[: -len(".desktop")]
+            for folder, nm, exe_name in app_match_specs():
+                if (f"X-Adobe-Wine-Panel={folder}" in txt
+                        or base in (nm, folder)
+                        or f"Adobe\\\\{folder}\\\\{exe_name}.exe" in txt
+                        or f"Adobe/{folder}/{exe_name}.exe" in txt):
                     try:
-                        with open(full_p, "w", encoding="utf-8") as f:
-                            f.write(new_desk_txt)
-                        os.chmod(full_p, 0o755)
-                        logs.append(f"• Extra shortcut updated: {full_p}")
+                        os.remove(full_p)
+                        logs.append(f"• Removed duplicate shortcut: {full_p}")
                     except Exception:
                         pass
+                    break
 
     if have("update-desktop-database"):
         sh(["update-desktop-database", LOCAL_APPS_DIR])
@@ -632,7 +1077,7 @@ def check_runtimes_status():
     fnt_ok = os.path.isfile(f"{fonts}/arial.ttf") or os.path.isfile(f"{fonts}/Arial.TTF")
 
     items = [
-        ("Visual C++ (2005-2022) & msvcp140 DLL'leri", vc_ok),
+        ("Visual C++ (2005-2022) & msvcp140 DLLs", vc_ok),
         ("DirectX / DXVK / d3dcompiler", dx_ok),
         (".NET Framework / .NET Desktop", net_ok),
         ("Python 3 (Windows 64-bit)", py_ok),
@@ -669,16 +1114,17 @@ def check_system(include_environment=False):
     line("wine command in /usr/bin", os.access("/usr/bin/wine", os.X_OK))
     line("pacman IgnorePkg guard", guard_ok())
     line("Panel start-menu shortcut", os.path.isfile(PANEL_DESKTOP))
-    line("Adobe shortcuts and icon files", shortcuts_and_icons_ok())
-    line("system32+syswow64 msvcp140/vcruntime DLL'leri (7 adet x2)", msvcp140_dlls_ok(), critical=False)
+    line("Adobe shortcuts and icon files (installed apps only)", shortcuts_and_icons_ok())
+    line("system32+syswow64 msvcp140/vcruntime DLLs (7 x2)", msvcp140_dlls_ok(), critical=False)
 
     for app in APPS:
         d, nm, _, _, icon_names, _ = app[:6]
         ex = app_exe_name(app)
+        if not app_exe_path(d, ex):
+            continue  # app not installed in this prefix - nothing to check
         dfile = os.path.join(WINE_PROGS_DIR, f"{d}.desktop")
         ic = resolve_app_icon(icon_names)
         line(f"{nm} menu shortcut and icon", os.path.isfile(dfile) and ic != "wine", critical=True)
-        line(f"{nm} (.exe)", os.path.isfile(f"{WINE_PREFIX}/drive_c/Program Files/Adobe/{d}/{ex}.exe"), critical=False)
     line("Audio backend (winepulse/PipeWire)", audio_backend_ok(), critical=False)
 
     if include_environment:
@@ -698,6 +1144,12 @@ def check_system(include_environment=False):
             line("Vulkan device accessible", getattr(vk, "returncode", 1) == 0, critical=False)
         else:
             line("Vulkan diagnostic tool (vulkaninfo)", False, critical=False)
+        if wayland_session():
+            line("Wine graphics driver: wayland (Wayland session)", wine_graphics_driver() == "wayland", critical=False)
+        if kde_session():
+            checked, okflag = kwin_prefer_efficiency_status()
+            if checked:
+                line("KDE display color mode: Prefer efficiency (dark-window fix)", okflag, critical=False)
 
     for r_name, r_ok in check_runtimes_status()[2]:
         line(f"Wine runtime: {r_name}", r_ok, critical=False)
@@ -1033,6 +1485,12 @@ class Panel(QWidget):
                 ("✨", t("c_shortcuts_t"), t("c_shortcuts_s"),
                  t("c_shortcuts_d"),
                  "#10b981", None, self.act_shortcuts),
+                ("🧹", t("c_cleanup_t"), t("c_cleanup_s"),
+                 t("c_cleanup_d"),
+                 "#94a3b8", None, self.act_cleanup),
+                ("🖥", t("c_kdefix_t"), t("c_kdefix_s"),
+                 t("c_kdefix_d"),
+                 "#a78bfa", None, self.act_kdefix),
                 ("⚙", t("c_winecfg_t"), t("c_winecfg_s"),
                  t("c_winecfg_d"),
                  "#5b8cff", None, self.act_winecfg),
@@ -1272,10 +1730,24 @@ class Panel(QWidget):
             self._msg(f"{name} " + t("d_notfound_suf"),
                       f"<b>{exe}</b> not found.<br><br>" + t("d_notfound_b"), True)
             return
+        try:
+            ensure_wine_graphics_driver()
+        except Exception:
+            pass
+        try:
+            if not os.path.isfile(WINE_RUN):
+                write_wine_helpers()
+        except Exception:
+            pass
+        win_exe = f"C:\\Program Files\\Adobe\\{folder}\\{ex}.exe"
         env = dict(os.environ, WINEPREFIX=WINE_PREFIX)
-        subprocess.Popen([WINE_BIN, f"C:\\Program Files\\Adobe\\{folder}\\{ex}.exe"],
-                         cwd=f"{WINE_PREFIX}/drive_c/Program Files/Adobe/{folder}",
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+        if os.path.isfile(WINE_RUN):
+            argv = [WINE_RUN, name, win_exe]
+        else:
+            argv = [WINE_BIN, win_exe]
+        subprocess.Popen(argv, cwd=f"{WINE_PREFIX}/drive_c/Program Files/Adobe/{folder}",
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env,
+                         start_new_session=True)
         self._msg(f"{name} " + t("d_started_suf"),
                   t("d_started_b"))
 
@@ -1370,6 +1842,43 @@ class Panel(QWidget):
         except Exception as ex:
             self._msg(t("d_error_t"), t("d_shortcuts_err") + f"<br><br><tt>{ex}</tt>", True)
 
+    def act_cleanup(self):
+        """Stop Adobe/Wine helper leftovers; close the prefix when no other app runs."""
+        try:
+            if not os.path.isfile(WINE_KILL):
+                write_wine_helpers()
+        except Exception:
+            pass
+        env = dict(os.environ, WINEPREFIX=WINE_PREFIX)
+        dlg = LogDialog(t("t_cleanup"), self)
+
+        def _after(code):
+            if code == 2 and self._ask(t("d_cleanup_force_t"), t("d_cleanup_force_q")):
+                dlg2 = LogDialog(t("t_cleanup"), self)
+                dlg2.run_async([WINE_KILL, "--full"], env=env)
+                dlg2.exec()
+                self.refresh_status()
+
+        dlg.run_async([WINE_KILL, "auto"], env=env, on_done=_after)
+        dlg.exec()
+        self.refresh_status()
+
+    def act_kdefix(self):
+        """Apply KWin/NVIDIA workarounds for dark/frozen Wine windows."""
+        if not kde_session():
+            self._msg(t("d_kdefix_nokde_t"), t("d_kdefix_nokde_b"), True)
+            return
+        if not self._ask(t("d_kdefix_t"), t("d_kdefix_q")):
+            return
+        try:
+            logs = apply_kde_fixes()
+        except Exception as ex:
+            self._msg(t("d_error_t"), t("d_kdefix_err") + f"<br><br><tt>{ex}</tt>", True)
+            return
+        details = "<br>".join(logs or [])
+        self._msg(t("d_kdefix_t"), t("d_kdefix_done") + f"<br><br>{details}")
+        self.refresh_status()
+
     def act_winecfg(self):
         if not self._require_wine():
             return
@@ -1381,6 +1890,10 @@ class Panel(QWidget):
         try:
             apply_guard()
             fix_shortcuts_and_icons()
+        except Exception:
+            pass
+        try:
+            ensure_wine_graphics_driver()
         except Exception:
             pass
         ok, bad, rows = check_system()
@@ -1438,6 +1951,10 @@ class Panel(QWidget):
                 guidance.append(t("g_crit"))
             elif "shortcut" in low or "icon" in low:
                 guidance.append(t("g_short"))
+            elif "graphics driver" in low or "wayland" in low:
+                guidance.append(t("g_wayland"))
+            elif "prefer efficiency" in low or "color mode" in low:
+                guidance.append(t("g_kde"))
         guidance = list(dict.fromkeys(guidance))
         details = "<br>".join(f"{icons.get(status, '•')} {text}" for status, text in safe_rows)
         if not guidance:
@@ -1931,7 +2448,7 @@ for f in wine wineserver winecfg wineboot wineconsole winedbg winefile winepath 
 done
 ${{ROOTCMD[@]}} update-desktop-database /usr/share/applications 2>/dev/null || true
 rm -rf "{WINE_PROGS_DIR}"
-rm -f "{PANEL_DESKTOP}"
+rm -f "{PANEL_DESKTOP}" "{WINE_RUN}" "{WINE_KILL}"
 rm -f "{ICON_PNG_DIR}"/substance-3d-*.png "{ICON_PNG_DIR}"/adobe-substance-*.png "{ICON_PNG_DIR}"/adobe-wine-panel*.png
 rm -f "{ICON_SVG_DIR}"/substance-3d-*.svg "{ICON_SVG_DIR}"/adobe-substance-*.svg "{ICON_SVG_DIR}"/adobe-wine-panel*.svg
 rm -f "{PIXMAPS_DIR}"/substance-3d-*.png "{PIXMAPS_DIR}"/adobe-substance-*.png "{PIXMAPS_DIR}"/adobe-wine-panel*.png
